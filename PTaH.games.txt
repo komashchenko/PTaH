@@ -1,0 +1,144 @@
+"Games"
+{
+	"csgo"
+	{
+		"Signatures"
+		{
+			"CDownloadListGenerator"
+			{
+				"library"		"engine"
+				"linux"			"@_ZN22CDownloadListGenerator19OnResourcePrecachedEPKc"
+				"windows"		"\x55\x8B\xEC\x81\xEC\x04\x01\x00\x00\x56\x8B\xF1\x8B\x4D\x08"
+			}
+			"ExecuteStringCommand"
+			{
+				"library"		"engine" 
+				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\x81\xEC\x8C\x00\x00\x00\x53" // sub_101A5730
+				"linux"			"@_ZN11CGameClient20ExecuteStringCommandEPKc"
+			}
+			"GetItemSchema"
+			{
+				"library"		"server"
+				"windows"		"\xA1\x2A\x2A\x2A\x2A\x85\xC0\x75\x2A\xA1\x2A\x2A\x2A\x2A\x56\x68\x2A\x2A\x00\x00\x8B"
+				"linux"			"@_Z13GetItemSchemav"
+			}
+			//CCStrike15ItemDefinition__GetLoadoutSlot(CCStrike15ItemDefinition *this, int def)
+			//CEconItemDefinition::GetLoadoutSlot() - does not work, always returns 0
+			"GetLoadoutSlot"
+			{
+				"library"		"server"
+				"windows"		"\x55\x8B\xEC\x8B\x45\x08\x83\xF8\x04\x7C\x2A\x8B\x81\x2A\x2A\x2A\x2A\x5D\xC2"
+				"linux"			"@_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi"
+			}
+			"GetEconItemViewFromWeapon"
+			{
+				"library"		"server"
+				"windows"		""
+				"linux"			"@_ZNK17CBaseCombatWeapon15GetEconItemViewEv"
+			}
+		}
+		"Offsets"
+		{
+			"ConnectClient"
+			{
+				"windows"		"54"
+				"linux"			"55"
+			}
+			"RejectConnection"
+			{
+				"windows"		"52"
+				"linux"			"53"
+			}
+			"GetItemDefintionByName"
+			{
+				"windows"		"42"
+				"linux"			"41"
+			}
+			"GetDefinitionIndex"
+			{
+				"windows"		"0"
+				"linux"			"0"
+			}
+			"GetNumSupportedStickerSlots"
+			{
+				"windows"		"41"
+				"linux"			"42"
+			}
+			"GetCustomPaintKitIndex"
+			{
+				"windows"		"1"
+				"linux"			"2"
+			}
+			"GetCustomPaintKitSeed"
+			{
+				"windows"		"2"
+				"linux"			"3"
+			}
+			"GetCustomPaintKitWear"
+			{
+				"windows"		"3"
+				"linux"			"4"
+			}
+			"GetStickerAttributeBySlotIndexFloat"
+			{
+				"windows"		"4"
+				"linux"			"5"
+			}
+			"GetStickerAttributeBySlotIndexInt"
+			{
+				"windows"		"5"
+				"linux"			"6"
+			}
+			"IsTradable"
+			{
+				"windows"		"6"
+				"linux"			"7"
+			}
+			"IsMarketable"
+			{
+				"windows"		"7"
+				"linux"			"8"
+			}
+			"GetItemDefinition"
+			{
+				"windows"		"12"
+				"linux"			"13"
+			}
+			"GetAccountID"
+			{
+				"windows"		"13"
+				"linux"			"14"
+			}
+			"GetQuality"
+			{
+				"windows"		"15"
+				"linux"			"16"
+			}
+			"GetRarity"
+			{
+				"windows"		"16"
+				"linux"			"17"
+			}
+			"GetFlags"
+			{
+				"windows"		"17"
+				"linux"			"18"
+			}
+			"GetOrigin"
+			{
+				"windows"		"18"
+				"linux"			"19"
+			}
+			"GetCustomName"
+			{
+				"windows"		"22"
+				"linux"			"23"
+			}
+			"GetKillEaterValueByType"
+			{
+				"windows"		"33"
+				"linux"			"34"
+			}
+		}
+	}
+}
