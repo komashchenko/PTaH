@@ -3,13 +3,13 @@
 #endif
 #define _PTaH_included
 
-enum PTaH_Hook
+enum PTaH_HookType
 {
 	Hook,
 	UnHook
 };
 
-enum PTaH_HookType
+enum PTaH_Hook
 {
 	PTaH_GiveNamedItem = 0,
 	PTaH_GiveNamedItemPre,
@@ -32,32 +32,32 @@ enum EStickerAttributeType
 
 methodmap CEconItemDefinition
 {
-	//!!!!!!!!!!!!!!!!!!!!! CEconItemDefinition не является Handle, CloseHandle() - НЕ НУЖЕН !!!!!!!!!!!!!!!!!!!!!
-	//!!!!!!!!!!!!!!!!!!!!! Всегда проверяйте, не равен ли CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! CEconItemDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
 
 	/**
-	 *	Получает DefinitionIndex.
+	 *	Gets DefinitionIndex.
 	 *	-
-	 * @return	Возвращает DefinitionIndex.
+	 * @return	Returns DefinitionIndex.
 	 *	-
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetDefinitionIndex();
 	
 	/**
-	 *	Получает LoadoutSlot.
-	 * @param def			значение по умолчанию.
+	 *	Gets LoadoutSlot.
+	 * @param def		default value.
 	 *	-
-	 * @return	Возвращает LoadoutSlot.
+	 * @return	Returns LoadoutSlot.
 	 *	-
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetLoadoutSlot(int def = -1);
 	
 	/**
-	 *	Получает колиество слотов под Sticker.
+	 *	Gets the amount slots for Sticker.
 	 *	-
-	 * @return	Возвращает StickerSlotsCount.
+	 * @return	Returns StickerSlotsCount.
 	 *	-
 	 * @error CEconItemDefinition == NULL.
 	*/
@@ -66,93 +66,93 @@ methodmap CEconItemDefinition
 
 methodmap CEconItemView
 {
-	//!!!!!!!!!!!!!!!!!!!!! CEconItemView не является Handle, CloseHandle() - НЕ НУЖЕН !!!!!!!!!!!!!!!!!!!!!
-	//!!!!!!!!!!!!!!!!!!!!! Всегда проверяйте, не равен ли CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
-	//!!!!!!!!!!!!!!!!!!!!! Не храните глобально CEconItemView иначе если игрок выйдет то после вызова функции вы получете Crash сервера !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! CEconItemView is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! If a player will left from a server after function call to obtain CEconItemView (PTaH_GetEconItemViewFromWeapon this applies if iEnt will be destroyed) You get crash server!!!!!!!!!!!!!!!!!!!!!
 	
 	/**
-	 *	Получает индекс скина оружия.
+	 *	Gets the index of the skin weapons.
 	 *	-
-	 * @return	Возвращает PaintKitIndex.
+	 * @return	Returns PaintKitIndex.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetCustomPaintKitIndex();
 	
 	/**
-	 *	Получает смещение скина оружия.
+	 *	Gets displacement of weapon skins.
 	 *	-
-	 * @return	Возвращает PaintKitSeed.
+	 * @return	Returns PaintKitSeed.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetCustomPaintKitSeed();
 	
 	/**
-	 *	Получает качество скина оружия.
-	 * @param def			значение по умолчанию.
+	 *	Gets quality skins weapons.
+	 * @param def			default value.
 	 *	-
-	 * @return	Возвращает PaintKitWear.
+	 * @return	Returns PaintKitWear.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native float GetCustomPaintKitWear(float def = -1.0);
 	
 	/**
-	 *	Получает значение атрибута по номеру слота Sticker.
-	 * @param iSlot			индекс слота.
-	 * @param ESAT			атрибут.
-	 * @param def			значение по умолчанию.
+	 *	Get the value of an attribute by number slots Sticker.
+	 * @param iSlot			Index Slot.
+	 * @param ESAT			attribute.
+	 * @param def			default value.
 	 *	-
-	 * @return	Возвращает StickerAttribute.
+	 * @return	Returns StickerAttribute.
 	 *	-
 	 * @error CEconItemView == NULL.
 	 * -
-	 * StickerID - возращает int, def тоже нужно передавать int
-	 * WearProgress, PatternScale, PatternRotation - возращает float, def тоже нужно передавать float
+	 * StickerID - returns int, def also need to transmit int
+	 * WearProgress, PatternScale, PatternRotation - returns float, def also need to transmit float
 	*/
 	public native any GetStickerAttributeBySlotIndex(int iSlot, EStickerAttributeType ESAT, any def);
 	
 	/**
-	 *	Провека: Можно ли обменивать оружие
+	 *	Check: Is it possible to exchange weapons
 	 *	-
-	 * @return	Возвращает Tradable.
+	 * @return	Returns Tradable.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native bool IsTradable();
 	
 	/**
-	 *	Проверка: Можно ли продать оружие - http://steamcommunity.com/market/
+	 *	Check: Is it possible to sell weapons - http://steamcommunity.com/market/
 	 *	-
-	 * @return	Возвращает Marketable.
+	 * @return	Returns Marketable.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native bool IsMarketable();
 	
 	/**
-	 *	Получает ItemDefinition.
+	 *	Gets ItemDefinition.
 	 *	-
-	 * @return	Возвращает CEconItemDefinition.
+	 * @return	Returns CEconItemDefinition.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native CEconItemDefinition GetItemDefinition();
 	
 	/**
-	 *	Получает AccountID владельца скина (сверить можно по GetSteamAccountID).
+	 *	Gets AccountID Owner skin (You can verify by GetSteamAccountID).
 	 *	-
-	 * @return	Возвращает AccountID.
+	 * @return	Returns AccountID.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetAccountID();
 	
 	/**
-	 *	Получает индекс владельца оружия.
+	 *	Gets Index Owner weapons.
 	 *	-
-	 * @return	Возвращает iClient.
+	 * @return	Returns iClient.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
@@ -164,9 +164,9 @@ methodmap CEconItemView
     }
 	
 	/**
-	 *	Получает кастюмный ли ItemView.
+	 *	Gets Custom ItemView.
 	 *	-
-	 * @return	Возвращает IsCustom.
+	 * @return	Returns IsCustom.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
@@ -176,56 +176,56 @@ methodmap CEconItemView
     }
 	
 	/**
-	 *	Получает Quality скина.
+	 *	Gets Quality skins.
 	 *	-
-	 * @return	Возвращает Quality.
+	 * @return	Returns Quality.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetQuality();
 	
 	/**
-	 *	Получает Rarity скина.
+	 *	Gets Rarity skins.
 	 *	-
-	 * @return	Возвращает Rarity.
+	 * @return	Returns Rarity.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetRarity();
 	
 	/**
-	 *	Получает Flags скина.
+	 *	Gets Flags skins.
 	 *	-
-	 * @return	Возвращает Flags.
+	 * @return	Returns Flags.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetFlags();
 	
 	/**
-	 *	Получает Origin скина.
+	 *	Gets Origin skins.
 	 *	-
-	 * @return	Возвращает Origin.
+	 * @return	Returns Origin.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetOrigin();
 	
 	/**
-	 *	Получает Неймтег скина.
-	 * @param sBuf			строка.
-	 * @param iLen			размер строки (максимальная длина, которая может быть - 161).
+	 *	Gets Name-tag skins.
+	 * @param sBuf			line.
+	 * @param iLen			row size (maximum length, which can be - 161).
 	 *	-
-	 * @return	Возвращает длину Неймтега.
+	 * @return	Returns length name-tag.
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
 	public native int GetCustomName(char[] sBuf, int iLen);
 	
 	/**
-	 *	Получает количество StatTrak.
+	 *	Gets amount StatTrak.
 	 *	-
-	 * @return	Возвращает количество StatTrak (если StatTrak = -1 значит его нет).
+	 * @return	Returns amount StatTrak (if StatTrak = -1 therefore it is not).
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
@@ -236,12 +236,12 @@ typeset PTaHCB
 {
 	/** GiveNamedItem
 	 *
-	 *	Вызывается когда игрок получает предмет.
+	 *	It called when a player receives a item.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sClassname		Класснейм предмета.
-	 * @param Item				Кастюмизация предмета.
-	 * @param iEnt				Индекс Ентити предмета.
+	 * @param iClient			Player Index.
+	 * @param sClassname		Classname item.
+	 * @param Item				Customization item.
+	 * @param iEnt				Index Entities item.
 	 *	-
 	 * @noreturn
 	*/
@@ -249,34 +249,34 @@ typeset PTaHCB
 	
 	/** GiveNamedItemPre
 	 *
-	 *	Вызывается перед выдачей предмета.
+	 *	Called before the issuance of the item.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sClassname		Класснейм оружия.
-	 * @param Item				Кастюмизация предмета.
+	 * @param iClient			Player Index.
+	 * @param sClassname		Classname weapons.
+	 * @param Item				Customization item.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled остановит выдачу предмета. Возврат Plugin_Continue разрешит выдачу предмета без изменений. Возврат Plugin_Changed разрешит выдачу примета с изминениями.
+	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Returns Plugin_Changed allow issuance item with changes.
 	*/
 	function Action (int iClient, char sClassname[64], CEconItemView &Item);
 	
 	/** WeaponCanUse
 	 *
-	 *	Вызывается когда игрок пытается поднять предмет.
+	 *	Called when a player is trying to pickup the item.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param iEnt				Индекс Ентити предмета.
-	 * @param CanUse			Для возврата без изменений.
+	 * @param iClient			Player Index.
+	 * @param iEnt				Index Entities item.
+	 * @param CanUse			For return without change.
 	 *	-
-	 * @return	Возврат false запретит подъем предмета. Возврат CanUse вернет ответ без изменений. Возврат true разрешит подъем предмета.
+	 * @return	Return false restrict pickup item. Return CanUse returns a response without changes. Return true allow pickup item.
 	*/
 	function bool (int iClient, int iEnt, bool CanUse);
 	
 	/** SetPlayerModel
 	 *
-	 *	Вызывается после смены модели игроку.
+	 *	Called after the change of the player model.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sModel			Путь к модели.
+	 * @param iClient			Player Index.
+	 * @param sModel			The path to the model.
 	 *	-
 	 * @noreturn
 	*/
@@ -284,131 +284,131 @@ typeset PTaHCB
 	
 	/** SetPlayerModelPre
 	 *
-	 *	Вызывается перед сменой модели игроку.
+	 *	Called before changing the player model.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sModel			Путь к текущей модели игрока.
-	 * @param sNewModel			Путь к новой модели.
+	 * @param iClient			Player Index.
+	 * @param sModel			The path to the current model player.
+	 * @param sNewModel			The path to a new model.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled остановит смену модели. Возврат Plugin_Continue разрешит смену модели без изменений. Возврат Plugin_Changed разрешит смену на измененную модель.
+	 * @return	Return Plugin_Stop or Plugin_Handled stop changing models. Returns Plugin_Continue allow change model without changes. Returns Plugin_Changed allow the change to the modified model.
 	*/
 	function Action (int iClient, const char[] sModel, char sNewModel[128]);
 	
 	/** ConsolePrint/ExecuteStringCommand
 	 * ConsolePrint
 	 *
-	 *	Вызывается перед выводом сообщения в консоль игроку.
+	 *	Called before displaying messages to the console player.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sMessage			Текст сообщения.
+	 * @param iClient			Player Index.
+	 * @param sMessage			Text Message.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит вывод сообщения. Возврат Plugin_Continue разрешит вывод сообщения без изменений. Возврат Plugin_Changed разрешит вывод измененного сообщения.
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict display message. Return Plugin_Continue allow the display message without changes. Return Plugin_Changed allow display changed message.
 	 *	-
 	 * ExecuteStringCommand
 	 *
-	 *	Вызывается перед выполнением команды игрока на сервере.
+	 *	Called before executing the command player of the team on the server.
 	 *	-
-	 * @param iClient			Индекс игрока.
-	 * @param sMessage			Команда.
+	 * @param iClient			Player Index.
+	 * @param sMessage			Command.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит выполнение. Возврат Plugin_Continue разрешит выполнение без изменений. Возврат Plugin_Changed разрешит выполнение с изенениями.
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict execution. Return Plugin_Continue allow execution without changes. Return Plugin_Changed allow execution with changes.
 	*/
 	function Action (int iClient, char sMessage[512]);
 	
 	/** MapContentList
 	 *
-	 *	Вызывается перед созданием контента карты который будет добавлен в скачку(AddFileToDownloadsTable не вызывает данное событие).
+	 *	Called before creating a map of content that will be added to the download(AddFileToDownloadsTable it does not cause this event).
 	 *	-
-	 * @param sFile				Путь к файлу который будет добавлен в скачку.
+	 * @param sFile				The path to the file that will be added to the download.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит добавление контента в скачку. Возврат Plugin_Continue разрешит добавление контента в скачку без изменений. Возврат Plugin_Changed разрешит добавление контента в скачку с изменением.
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict add content to download. Return Plugin_Continue allow add content to download without changes. Returns Plugin_Changed allow add content to download with changes.
 	*/
 	function Action (char sFile[128]);	
 	
 	/** OnClientConnect
 	 *
-	 *	Вызывается перед авторизацией клиента на сервере.
+	 *	Called before the authorization of the client to the server.
 	 *	-
-	 * @param sName				Никнейм клиента.
-	 * @param sPassword			Пароль который он ввел.
-	 * @param sIp				IP клиента.
-	 * @param sSteamID			SteamID (2 версии) клиента.
-	 * @param rejectReason		Причина неавторизации.
+	 * @param sName				Nickname client.
+	 * @param sPassword			Password witch he introduced.
+	 * @param sIp				IP client.
+	 * @param sSteamID			SteamID (2 version) client.
+	 * @param rejectReason		The reason is not authorized.
 	 *	-
-	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит авторизацию клиента. Возврат Plugin_Continue разрешит авторизацию без изменений. Возврат Plugin_Changed разрешит авторизацию с изменением.
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict autherization client. Return Plugin_Continue allow autherization without changes. Возврат Plugin_Changed allow autherization with changes.
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
 };
 
 /**
- *	Активирует хук.
- * @param type					Тип хука.
+ *	Enables Hook.
+ * @param type					Type Hook.
  * @param hk					Hook/UnHook.
- * @param callback				Обратный вызов.
+ * @param callback				Callback.
  *	-
- * @return	Возвращает true в случае удачи, иначе false.
+ * @return	Return true if one is fortunate, otherwise false.
 */
-native bool PTaH(PTaH_HookType type, PTaH_Hook hk, PTaHCB callback);
+native bool PTaH(PTaH_Hook hk, PTaH_HookType type, PTaHCB callback);
 
 /**
- *	Получает CEconItemDefinition из ClassName оружия.
- * @param sClassName					ClassName оружия.
+ *	Gets CEconItemDefinition from ClassName weapons.
+ * @param sClassName					ClassName weapons.
  *	-
- * @return	Возвращает CEconItemDefinition.
+ * @return	Returns CEconItemDefinition.
 */
 native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassName);
 
 /**
- *	Получает CEconItemView оружия клиента.
- * @param iClient					Индекс клиента.
- * @param iTeam						Индекс команды.
- * @param iLoadoutSlot				Индекс слота оружия.
+ *	Gets CEconItemView weapons client.
+ * @param iClient					Index Client.
+ * @param iTeam						Index Commands.
+ * @param iLoadoutSlot				Index Slot Weapons.
  *	-
- * @return	Возвращает CEconItemDefinition.
+ * @return	Returns CEconItemDefinition.
  *	-
- * @error невалдный iClient, !(2 <= iTeam <= 3).
+ * @error invalid iClient, !(2 <= iTeam <= 3).
 */
 native CEconItemView PTaH_GetItemInLoadout(int iClient, int iTeam, int iLoadoutSlot);
 
 /**
- *	Получает CEconItemView оружия.
- * @param iEnt					Индекс оружия.
+ *	Gets CEconItemView weapons.
+ * @param iEnt					Index weapons.
  *	-
- * @return	Возвращает CEconItemDefinition.
+ * @return	Returns CEconItemDefinition.
  *	-
- * @error невалдный iEnt, iEnt не является оружием.
+ * @error invalid iEnt, iEnt not a weapon
 */
 native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 
 /**
- *	Выдает игроку предмет с указанным CEconItemView.
- * @param iClient				Индекс игрока.
- * @param sClassname			Класнейм предмета.
- * @param Item					Кастюмизация предмета.
+ *	It gives the player item with the specified CEconItemView.
+ * @param iClient				Index Player.
+ * @param sClassname			Classname item.
+ * @param Item					Customization item.
  *	-
- * @return	Возвращает индекс предмета.
+ * @return	Return index item.
  *	-
- * @error невалдный iClient.
+ * @error invalid iClient.
 */
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
 
 /**
- *	Получает md5 hash файла.
- * @param sFile					Путь к файлу.
- * @param sBuffer				Строка куда будет записан hash.
- * @param len					Длина строки.
+ *	gets md5 hash file.
+ * @param sFile					The path to the file.
+ * @param sBuffer				The string will be recorded hash.
+ * @param len					length of the line.
  *	-
- * @return	Возвращает true в случаи успеха.
+ * @return	Return true if successful.
  *	-
- * @error sFile не существует.
+ * @error sFile does not exist.
 */
 native bool PTaH_MD5File(const char[] sFile, char[] sBuffer, int len);
 
 /**
- *	Получает ip хоста.
- * @param sHostName					домен.
+ *	Gets ip host.
+ * @param sHostName					domain.
  *	-
- * @return	ip.
+ * @return	Return true if successful.
  *	-
  * @error -.
 */
