@@ -219,7 +219,20 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cel
 	{
 		return pContext->ThrowNativeError("Entity %d is not weapon", params[1]);
 	}
+
+#ifdef WIN32
+	static int offset = 0;
 	
+	if (offset == 0 && !g_pGameConf[GameConf_PTaH]->GetOffset("CBaseCombatWeapon::m_hEconItemView", &offset))
+	{
+		smutils->LogError(myself, "Failed to find offset for CBaseCombatWeapon::m_hEconItemView");
+		return 0;
+	}
+	
+	CEconItemView *pView = (CEconItemView *)((uint8 *)pEntity + offset);
+	
+	return (cell_t)pView;
+#else
 	static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
 	{
@@ -248,6 +261,7 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cel
 	CEconItemView *pView = nullptr;
 	pCallWrapper->Execute(vstk, &pView);
 	return (cell_t)pView;
+#endif
 }
 
 static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext *pContext, const cell_t *params)
