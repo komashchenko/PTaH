@@ -30,10 +30,10 @@
 				"windows"		"\x55\x8B\xEC\x8B\x45\x08\x83\xF8\x04\x7C\x2A\x8B\x81\x2A\x2A\x2A\x2A\x5D\xC2"
 				"linux"			"@_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi"
 			}
+			// Inlined on Windows. Get it from the CBaseCombatWeapon offset.
 			"GetEconItemViewFromWeapon"
 			{
 				"library"		"server"
-				"windows"		""
 				"linux"			"@_ZNK17CBaseCombatWeapon15GetEconItemViewEv"
 			}
 		}
@@ -138,6 +138,11 @@
 			{
 				"windows"		"33"
 				"linux"			"34"
+			}
+			"CBaseCombatWeapon::m_hEconItemView"
+			{
+				"windows"		"1768"
+				"linux"			"1788"
 			}
 		}
 	}
