@@ -3,6 +3,15 @@
 #endif
 #define _PTaH_included
 
+
+#define AF_UNSPEC	0
+#define AF_INET	2
+#define AF_INET6	10
+
+#define INET_ADDRSTRLEN 16
+#define INET6_ADDRSTRLEN 46
+
+
 enum PTaH_HookType
 {
 	Hook,
@@ -19,7 +28,8 @@ enum PTaH_Hook
 	PTaH_ConsolePrint,
 	PTaH_MapContentList,
 	PTaH_OnClientConnect,
-	PTaH_ExecuteStringCommand
+	PTaH_ExecuteStringCommand,
+	PTaH_ServerConsolePrint
 };
 
 enum EStickerAttributeType 
@@ -232,6 +242,55 @@ methodmap CEconItemView
 	public native int GetStatTrakKill();
 };
 
+methodmap AddrInfo
+{
+	//!!!!!!!!!!!!!!!!!!!!! AddrInfo is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded AddrInfo - NULL ( if(AddrInfo) ) !!!!!!!!!!!!!!!!!!!!!
+	
+	/**
+	 *	Gets the version IP addresses (AF_INET или AF_INET6).
+	 *	-
+	 * @return	AF_INET или AF_INET6.
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	property int Family
+	{
+		public native get();
+	}
+	
+	/**
+	 *	It records the IP address in line.
+	 *	-
+	 * @noreturn
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	public native void GetIP(char[] sBuffer, int len);
+	
+	/**
+	 *	Gets AddrInfo next IP.
+	 *	-
+	 * @return	AddrInfo.
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	property AddrInfo NextIP
+	{
+		public native get();
+	}
+	
+	/**
+	 *	Clears the selected for AddrInfo memory (!!! only need to clean the main AddrInfo, AddrInfo received from NextIP You do not need to clean it !!!).
+	 *	-
+	 * @noreturn
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	public native void ClearMem();
+};
+
+
 typeset PTaHCB
 {
 	/** GiveNamedItem
@@ -335,9 +394,19 @@ typeset PTaHCB
 	 * @param sSteamID			SteamID (2 version) client.
 	 * @param rejectReason		The reason is not authorized.
 	 *	-
-	 * @return	Return Plugin_Stop or Plugin_Handled restrict autherization client. Return Plugin_Continue allow autherization without changes. Возврат Plugin_Changed allow autherization with changes.
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict autherization client. Return Plugin_Continue allow autherization without changes. Return Plugin_Changed allow autherization with changes.
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
+	
+	/** ServerConsolePrint
+	 *
+	 *	Called before displaying a message in the server console (Be careful with the messages).
+	 *	-
+	 * @param sMessage				The message is printed to the server console.
+	 *	-
+	 * @return	Return Plugin_Stop or Plugin_Handled restrict the display messages. Return Plugin_Continue allow display messages without changes.
+	*/
+	function Action (const char[] sMessage);
 };
 
 /**
@@ -396,7 +465,7 @@ native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemVi
  *	gets md5 hash file.
  * @param sFile					The path to the file.
  * @param sBuffer				The string will be recorded hash.
- * @param len					length of the line.
+ * @param len					Length of the line.
  *	-
  * @return	Return true if successful.
  *	-
@@ -405,14 +474,24 @@ native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemVi
 native bool PTaH_MD5File(const char[] sFile, char[] sBuffer, int len);
 
 /**
- *	Gets ip host.
- * @param sHostName					domain.
+ *	Gets AddrInfo on hostname.
+ * @param sHostName				Hostname.
+ * @param family				Generation IP (AF_INET | AF_INET6 | AF_UNSPEC).
+ * @param addr					The variable which will be recorded AddrInfo If successful.
  *	-
- * @return	Return true if successful.
- *	-
- * @error -.
+ * @return	Index error (if there is).
 */
-native int PTaH_GetHostByName(const char[] sHostName);
+native int PTaH_GetAddrInfo(const char[] sHostName, int family, AddrInfo &addr);
+
+/**
+ *	Gets an error in its index.
+ * @param error					Index error.
+ * @param sBuffer				Line where the error will be recorded.
+ * @param len					Length sBuffer.
+ *	-
+ * @return	Amount written characters.
+*/
+native int PTaH_Gai_StrError(int error, char[] sBuffer, int len);
 
 public Extension __ext_PTaH = 
 {
@@ -456,6 +535,10 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
 	MarkNativeAsOptional("PTaH_MD5File");
-	MarkNativeAsOptional("PTaH_GetHostByName");
+	MarkNativeAsOptional("PTaH_GetAddrInfo");
+	MarkNativeAsOptional("PTaH_Gai_StrError");
+	MarkNativeAsOptional("AddrInfo.Family.get");
+	MarkNativeAsOptional("AddrInfo.GetIP");
+	MarkNativeAsOptional("AddrInfo.NextIP.get");
 }
 #endif

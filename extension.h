@@ -52,6 +52,7 @@
 #include <isteamutils.h>
 #include "steamclientpublic.h"
 #include <iserver.h>
+#include "IMemoryUtils.h"
 
 
 typedef CBaseEntity CBaseCombatWeapon;
@@ -66,7 +67,8 @@ enum PTaHType
 	PTaH_ConsolePrint,
 	PTaH_MapContentList,
 	PTaH_OnClientConnect,
-	PTaH_ExecuteStringCommand
+	PTaH_ExecuteStringCommand,
+	PTaH_ServerConsolePrint
 };
 
 /**

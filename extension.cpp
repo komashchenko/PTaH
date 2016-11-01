@@ -49,6 +49,7 @@ IGameConfig *g_pGameConf[4];
 IBinTools *bintools = nullptr;
 ISDKTools *sdktools = nullptr;
 IServer *iserver = nullptr;
+IMemoryUtils *memutils = nullptr;
 
 CEconItemSchema *g_pCEconItemSchema = nullptr;
 
@@ -86,7 +87,9 @@ bool PTaH::SDK_OnLoad(char *error, size_t maxlength, bool late)
 		return false;
 	}
 	
-	//CDownloadListGenerator
+	//ServerConsolePrint
+	SM_GET_IFACE(MEMORYUTILS, memutils);
+	
 	CDetourManager::Init(smutils->GetScriptingEngine(), g_pGameConf[GameConf_PTaH]);
 	
 	sharesys->AddDependency(myself, "bintools.ext", true, true);

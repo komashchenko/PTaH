@@ -690,7 +690,7 @@ int CEconItemView::GetKillEaterValueByType(unsigned int type)
 		
 		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetKillEaterValueByType", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetKillEaterValueByType location");
+			smutils->LogError(myself, "Failed to get GetKillEaterValueByType offset");
 			return -1;
 		}
 		

@@ -32,6 +32,7 @@
 #include "extension.h"
 #include "forwards.h"
 #include "classes.h"
+#include <tier0/dbg.h> 
 
 CForwardManager g_pPTaHForwards;
 
@@ -98,6 +99,59 @@ DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 	return DETOUR_MEMBER_CALL(ExecuteStringCommand)(szMsg);
 }
 
+DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, channelID, LoggingSeverity_t, severity, Color, color, const tchar *, pMessage)
+{
+	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0)
+	{
+		cell_t res = PLUGIN_CONTINUE;
+		g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
+		g_pPTaHForwards.m_pServerConsolePrint->Execute(&res);
+		
+		if(res != Pl_Continue) return LR_CONTINUE;
+	}
+	return DETOUR_MEMBER_CALL(LoggingSeverity)(channelID, severity, color, pMessage);
+}
+
+#ifdef WIN32
+//https://github.com/alliedmodders/sourcemod/blob/237db0504c7a59e394828446af3e8ca3d53ef647/extensions/sdktools/vglobals.cpp#L149
+size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
+{
+	size_t real_bytes = 0;
+	size_t length = strlen(str);
+
+	for (size_t i=0; i<length; i++)
+	{
+		if (real_bytes >= maxlength)
+		{
+			break;
+		}
+		buffer[real_bytes++] = (unsigned char)str[i];
+		if (str[i] == '\\'
+			&& str[i+1] == 'x')
+		{
+			if (i + 3 >= length)
+			{
+				continue;
+			}
+			/* Get the hex part */
+			char s_byte[3];
+			int r_byte;
+			s_byte[0] = str[i+2];
+			s_byte[1] = str[i+3];
+			s_byte[2] = '\n';
+			/* Read it as an integer */
+			sscanf(s_byte, "%x", &r_byte);
+			/* Save the value */
+			buffer[real_bytes-1] = (unsigned char)r_byte;
+			/* Adjust index */
+			i += 3;
+		}
+	}
+
+	return real_bytes;
+}
+#endif
+
 bool CForwardManager::Init()
 {
 	int offset = -1;
@@ -156,6 +210,36 @@ bool CForwardManager::Init()
 	}
 	else m_pDExecuteStringCommand->EnableDetour();
 	
+	
+	#ifdef WIN32
+	HMODULE tier0 = GetModuleHandle("tier0.dll");
+	
+	char signature[30];
+	size_t size = UTIL_StringToSignature(g_pGameConf[GameConf_PTaH]->GetKeyValue("ServerConsolePrint_signature_windows"), signature, 30);
+	
+	void * fn = memutils->FindPattern(tier0, signature, size);
+	#else
+	void * tier0 = dlopen("libtier0.so", RTLD_NOW);
+	void * fn = memutils->ResolveSymbol(tier0, g_pGameConf[GameConf_PTaH]->GetKeyValue("ServerConsolePrint_signature_linux"));
+	#endif
+	if(!fn)
+	{
+		smutils->LogError(myself, "Failed get signature ServerConsolePrint.");
+		return false;
+	}
+	
+	m_pLoggingSeverity = DETOUR_CREATE_MEMBER_PTR(LoggingSeverity, fn);
+	if (!m_pLoggingSeverity)
+	{
+		smutils->LogError(myself, "Detour failed ServerConsolePrint.");
+		return false;
+	}
+	else m_pLoggingSeverity->EnableDetour();
+	
+	
+	
+	
+	
 	SH_ADD_HOOK(IVEngineServer, ClientPrintf, engine, SH_MEMBER(this, &CForwardManager::ClientPrint), false);
 	SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
 
@@ -169,6 +253,7 @@ bool CForwardManager::Init()
 	m_pMapContentList = forwards->CreateForwardEx(NULL, ET_Hook, 1, NULL, Param_String);
 	m_pOnClientConnect = forwards->CreateForwardEx(NULL, ET_Hook, 5, NULL, Param_String, Param_String, Param_String, Param_String, Param_String);
 	m_pExecuteStringCommand = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_Cell, Param_String);
+	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 1, NULL, Param_String);
 	
 	return true;
 }
@@ -184,6 +269,7 @@ void CForwardManager::Shutdown()
 	forwards->ReleaseForward(m_pMapContentList);
 	forwards->ReleaseForward(m_pOnClientConnect);
 	forwards->ReleaseForward(m_pExecuteStringCommand);
+	forwards->ReleaseForward(m_pServerConsolePrint);
 }
 
 void CForwardManager::HookClient(int client)

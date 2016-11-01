@@ -3,6 +3,15 @@
 #endif
 #define _PTaH_included
 
+
+#define AF_UNSPEC	0
+#define AF_INET	2
+#define AF_INET6	10
+
+#define INET_ADDRSTRLEN 16
+#define INET6_ADDRSTRLEN 46
+
+
 enum PTaH_HookType
 {
 	Hook,
@@ -19,7 +28,8 @@ enum PTaH_Hook
 	PTaH_ConsolePrint,
 	PTaH_MapContentList,
 	PTaH_OnClientConnect,
-	PTaH_ExecuteStringCommand
+	PTaH_ExecuteStringCommand,
+	PTaH_ServerConsolePrint
 };
 
 enum EStickerAttributeType 
@@ -232,6 +242,55 @@ methodmap CEconItemView
 	public native int GetStatTrakKill();
 };
 
+methodmap AddrInfo
+{
+	//!!!!!!!!!!!!!!!!!!!!! AddrInfo is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded AddrInfo - NULL ( if(AddrInfo) ) !!!!!!!!!!!!!!!!!!!!!
+	
+	/**
+	 *	Получает версию IP адреса (AF_INET или AF_INET6).
+	 *	-
+	 * @return	AF_INET или AF_INET6.
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	property int Family
+	{
+		public native get();
+	}
+	
+	/**
+	 *	Записывает IP адрес в строку.
+	 *	-
+	 * @noreturn
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	public native void GetIP(char[] sBuffer, int len);
+	
+	/**
+	 *	Получает AddrInfo следующего IP.
+	 *	-
+	 * @return	AddrInfo.
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	property AddrInfo NextIP
+	{
+		public native get();
+	}
+	
+	/**
+	 *	Очищает выделенную по AddrInfo память (!!! очищать нужно только основной AddrInfo, AddrInfo полученный с NextIP очищать не нужно !!!).
+	 *	-
+	 * @noreturn
+	 *	-
+	 * @error AddrInfo == NULL.
+	*/
+	public native void ClearMem();
+};
+
+
 typeset PTaHCB
 {
 	/** GiveNamedItem
@@ -338,6 +397,16 @@ typeset PTaHCB
 	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит авторизацию клиента. Возврат Plugin_Continue разрешит авторизацию без изменений. Возврат Plugin_Changed разрешит авторизацию с изменением.
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
+	
+	/** ServerConsolePrint
+	 *
+	 *	Вызывается перед выводом сообщение в консоль сервера (Будьте аккуратны при роботе с сообщениями).
+	 *	-
+	 * @param sMessage				Сообщение которое печатается в консоль сервера.
+	 *	-
+	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит вывод сообщения. Возврат Plugin_Continue разрешит вывод без изменений.
+	*/
+	function Action (const char[] sMessage);
 };
 
 /**
@@ -405,14 +474,24 @@ native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemVi
 native bool PTaH_MD5File(const char[] sFile, char[] sBuffer, int len);
 
 /**
- *	Получает ip хоста.
- * @param sHostName					домен.
+ *	Получает AddrInfo по хост имени.
+ * @param sHostName				Имя хоста.
+ * @param family				Поколение IP (AF_INET | AF_INET6 | AF_UNSPEC).
+ * @param addr					Переменная в которую будет записано AddrInfo в случаи успеха.
  *	-
- * @return	Возвращает true в случаи успеха.
- *	-
- * @error -.
+ * @return	Индекс ошибки (если есть).
 */
-native int PTaH_GetHostByName(const char[] sHostName);
+native int PTaH_GetAddrInfo(const char[] sHostName, int family, AddrInfo &addr);
+
+/**
+ *	Получает ошибку по ее индексу.
+ * @param error					Индекс ошибки.
+ * @param sBuffer				Строка куда будет записана ошибка.
+ * @param len					Длина sBuffer.
+ *	-
+ * @return	Количество записанных символов.
+*/
+native int PTaH_Gai_StrError(int error, char[] sBuffer, int len);
 
 public Extension __ext_PTaH = 
 {
@@ -456,6 +535,10 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
 	MarkNativeAsOptional("PTaH_MD5File");
-	MarkNativeAsOptional("PTaH_GetHostByName");
+	MarkNativeAsOptional("PTaH_GetAddrInfo");
+	MarkNativeAsOptional("PTaH_Gai_StrError");
+	MarkNativeAsOptional("AddrInfo.Family.get");
+	MarkNativeAsOptional("AddrInfo.GetIP");
+	MarkNativeAsOptional("AddrInfo.NextIP.get");
 }
 #endif

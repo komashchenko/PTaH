@@ -36,9 +36,12 @@
 #include "tier1/checksum_md5.h"
 #include "server_class.h"
 #ifdef WIN32
+#define AI_IDN	0x0040
+#include "Ws2tcpip.h"
 #include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib,"Ws2_32.lib")
 #else
+#include <arpa/inet.h>
 #include <netdb.h> 
 #endif
 
@@ -58,6 +61,7 @@ static cell_t PTaH_(IPluginContext *pContext, const cell_t *params)
 			case PTaH_MapContentList : return g_pPTaHForwards.m_pMapContentList->AddFunction(pContext, static_cast<funcid_t>(params[3]));
 			case PTaH_OnClientConnect : return g_pPTaHForwards.m_pOnClientConnect->AddFunction(pContext, static_cast<funcid_t>(params[3]));
 			case PTaH_ExecuteStringCommand : return g_pPTaHForwards.m_pExecuteStringCommand->AddFunction(pContext, static_cast<funcid_t>(params[3]));
+			case PTaH_ServerConsolePrint : return g_pPTaHForwards.m_pServerConsolePrint->AddFunction(pContext, static_cast<funcid_t>(params[3]));
 		}
 	}
 	else
@@ -73,6 +77,7 @@ static cell_t PTaH_(IPluginContext *pContext, const cell_t *params)
 			case PTaH_MapContentList : return g_pPTaHForwards.m_pMapContentList->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
 			case PTaH_OnClientConnect: return g_pPTaHForwards.m_pOnClientConnect->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
 			case PTaH_ExecuteStringCommand : return g_pPTaHForwards.m_pExecuteStringCommand->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
+			case PTaH_ServerConsolePrint : return g_pPTaHForwards.m_pServerConsolePrint->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
 		}
 	}
 	return false;
@@ -206,6 +211,7 @@ bool UTIL_ContainsDataTable(SendTable *pTable, const char *name)
 	return false;
 }
 
+//Thank you GoD-Tony https://github.com/komashchenko/PTaH/pull/1
 static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cell_t *params)
 {
 	CBaseEntity *pEntity = gamehelpers->ReferenceToEntity(params[1]);
@@ -220,34 +226,15 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cel
 		return pContext->ThrowNativeError("Entity %d is not weapon", params[1]);
 	}
 	
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	
+	if(offset == -1 && !g_pGameConf[GameConf_PTaH]->GetOffset("m_hEconItemView", &offset))
 	{
-		void *addr = nullptr;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetMemSig("GetEconItemViewFromWeapon", &addr) || !addr)
-		{
-			smutils->LogError(myself, "Failed to get GetEconItemViewFromWeapon location");
-			return 0;
-		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
-
-		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, NULL, 0);
+		smutils->LogError(myself, "Failed to get m_hEconItemView offset");
+		return 0;
 	}
 	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)pEntity;
-
-	CEconItemView *pView = nullptr;
-	pCallWrapper->Execute(vstk, &pView);
-	return (cell_t)pView;
+	return (intptr_t)pEntity + offset;
 }
 
 static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext *pContext, const cell_t *params)
@@ -444,17 +431,82 @@ static cell_t PTaH_MD5File(IPluginContext *pContext, const cell_t *params)
 	char *buffer;
 	pContext->LocalToString(params[2], &buffer);
 
-	g_pSM->Format(buffer, params[3], "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]);
-	for(int i = 0; i < params[3]; i++) buffer[i] = toupper(buffer[i]);
+	g_pSM->Format(buffer, params[3], "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]);
 	return 1;
 }
 
-cell_t PTaH_GetHostByName(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_GetAddrInfo(IPluginContext *pContext, const cell_t *params) 
 { 
 	char * pHostName;  pContext->LocalToString(params[1], &pHostName); 
-	struct hostent * pHostData; 
-	if ((pHostData = gethostbyname(pHostName)) == NULL) return 0; 
-	return *((unsigned long *)pHostData->h_addr);
+	
+	struct addrinfo hints, *res;
+    int status;
+	
+	memset(&hints, 0, sizeof(hints));
+	
+	hints.ai_family = params[2];
+    hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_IDN;
+	
+	if((status = getaddrinfo(pHostName, NULL, &hints, &res)) == 0)
+	{
+		cell_t *info;
+		pContext->LocalToPhysAddr(params[3], &info);
+		*info = (cell_t)res;
+	}
+	return status;
+}
+
+cell_t PTaH_Gai_StrError(IPluginContext *pContext, const cell_t *params) 
+{
+	size_t numBytes;
+	char *buf = const_cast<char*>(gai_strerror(params[1]));
+	pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
+	return numBytes;
+}
+
+cell_t PTaH_AddrInfoFamily(IPluginContext *pContext, const cell_t *params) 
+{ 
+	if(params[1]) return (cell_t)(((struct addrinfo *)params[1])->ai_family);
+	else return pContext->ThrowNativeError("AddrInfo invalid");
+}
+
+cell_t PTaH_AddrInfoHost(IPluginContext *pContext, const cell_t *params) 
+{
+	if(params[1])
+	{
+		struct addrinfo *res = (struct addrinfo *)params[1];
+		
+		char *addr_s;
+		
+		pContext->LocalToString(params[2], &addr_s);
+		
+		void *addr;
+		
+		if(res->ai_family == AF_INET) addr = &(((struct sockaddr_in *)res->ai_addr)->sin_addr);
+		else addr = &(((struct sockaddr_in6 *)res->ai_addr)->sin6_addr);
+		
+		inet_ntop(res->ai_family, addr, addr_s, params[3]);
+		
+		return 1;
+	}
+	else return pContext->ThrowNativeError("AddrInfo invalid");
+}
+
+cell_t PTaH_AddrInfoNextIP(IPluginContext *pContext, const cell_t *params) 
+{ 
+	if(params[1]) return (cell_t)(((struct addrinfo *)params[1])->ai_next);
+	else return pContext->ThrowNativeError("AddrInfo invalid");
+}
+
+cell_t PTaH_AddrInfoClearMem(IPluginContext *pContext, const cell_t *params) 
+{ 
+	if(params[1])
+	{
+		freeaddrinfo((struct addrinfo *)params[1]);
+		return 1;
+	}
+	else return pContext->ThrowNativeError("AddrInfo invalid");
 }
 
 
@@ -483,6 +535,11 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEaterValueByType },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
 	{ "PTaH_MD5File",										PTaH_MD5File },
-	{ "PTaH_GetHostByName",									PTaH_GetHostByName },
+	{ "PTaH_GetAddrInfo",									PTaH_GetAddrInfo },
+	{ "PTaH_Gai_StrError",									PTaH_Gai_StrError },
+	{ "AddrInfo.Family.get",								PTaH_AddrInfoFamily },
+	{ "AddrInfo.GetIP",										PTaH_AddrInfoHost },
+	{ "AddrInfo.NextIP.get",								PTaH_AddrInfoNextIP },
+	{ "AddrInfo.ClearMem",									PTaH_AddrInfoClearMem },
 	{ NULL,													NULL }
 };
