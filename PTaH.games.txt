@@ -13,7 +13,7 @@
 			"ExecuteStringCommand"
 			{
 				"library"		"engine" 
-				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\x81\xEC\x8C\x00\x00\x00\x53" // sub_101A5730
+				"windows"		"\x55\x8B\xEC\x81\xEC\x0C\x05\x00\x00\x56"
 				"linux"			"@_ZN11CGameClient20ExecuteStringCommandEPKc"
 			}
 			"GetItemSchema"
