@@ -7,20 +7,20 @@
 			"CDownloadListGenerator"
 			{
 				"library"		"engine"
-				"linux"			"@_ZN22CDownloadListGenerator19OnResourcePrecachedEPKc"
 				"windows"		"\x55\x8B\xEC\x81\xEC\x04\x01\x00\x00\x56\x8B\xF1\x8B\x4D\x08"
+				"linux"			"\x55\x89\xE5\x83\xEC\x18\x89\x75\xFC\x8B\x75\x0C\x89\x5D\xF8\x8B\x5D\x08\x0F\xB6\x06" //_ZN22CDownloadListGenerator19OnResourcePrecachedEPKc
 			}
 			"ExecuteStringCommand"
 			{
 				"library"		"engine" 
-				"windows"		"\x55\x8B\xEC\x81\xEC\x0C\x05\x00\x00\x56"
-				"linux"			"@_ZN11CGameClient20ExecuteStringCommandEPKc"
+				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\x81\xEC\x8C\x00\x00\x00\x53" // sub_101A5730
+				"linux"			"\x55\x89\xE5\x81\xEC\x38\x05\x00\x00" //_ZN11CGameClient20ExecuteStringCommandEPKc
 			}
 			"GetItemSchema"
 			{
 				"library"		"server"
 				"windows"		"\xA1\x2A\x2A\x2A\x2A\x85\xC0\x75\x2A\xA1\x2A\x2A\x2A\x2A\x56\x68\x2A\x2A\x00\x00\x8B"
-				"linux"			"@_Z13GetItemSchemav"
+				"linux"			"\x55\x89\xE5\x83\xEC\x08\xE8\x2A\x2A\x2A\x2A\xC9\x83\xC0\x04\xC3" //_Z13GetItemSchemav
 			}
 			//CCStrike15ItemDefinition__GetLoadoutSlot(CCStrike15ItemDefinition *this, int def)
 			//CEconItemDefinition::GetLoadoutSlot() - does not work, always returns 0
@@ -28,16 +28,19 @@
 			{
 				"library"		"server"
 				"windows"		"\x55\x8B\xEC\x8B\x45\x08\x83\xF8\x04\x7C\x2A\x8B\x81\x2A\x2A\x2A\x2A\x5D\xC2"
-				"linux"			"@_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi"
+				"linux"			"\x55\x89\xE5\x8B\x45\x0C\x8B\x55\x08\x8D\x48\xFF" //_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi
 			}
 		}
 		"Keys"
 		{
 			"ServerConsolePrint_signature_windows"			"\x55\x8B\xEC\x83\xE4\xF8\x83\xEC\x14\x8B\x45\x08\x53\x56\x57\x8B\xF9"
-			"ServerConsolePrint_signature_linux"			"_ZN14CLoggingSystem9LogDirectEi17LoggingSeverity_t5ColorPKc"
 		}
 		"Offsets"
 		{
+			"ServerConsolePrint"
+			{
+				"linux"			"144" // Thank you rom4s
+			}
 			"m_hEconItemView"
 			{
 				"windows"		"1768"

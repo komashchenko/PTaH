@@ -218,15 +218,31 @@ bool CForwardManager::Init()
 	size_t size = UTIL_StringToSignature(g_pGameConf[GameConf_PTaH]->GetKeyValue("ServerConsolePrint_signature_windows"), signature, 30);
 	
 	void * fn = memutils->FindPattern(tier0, signature, size);
-	#else
-	void * tier0 = dlopen("libtier0.so", RTLD_NOW);
-	void * fn = memutils->ResolveSymbol(tier0, g_pGameConf[GameConf_PTaH]->GetKeyValue("ServerConsolePrint_signature_linux"));
-	#endif
+	
 	if(!fn)
 	{
 		smutils->LogError(myself, "Failed get signature ServerConsolePrint.");
 		return false;
 	}
+	#else
+	void * tier0 = dlopen("libtier0.so", RTLD_NOW);
+	// Thank you rom4s
+	void * fn = memutils->ResolveSymbol(tier0, "LoggingSystem_Log");
+	
+	if(!fn)
+	{
+		smutils->LogError(myself, "Failed get LoggingSystem_Log.");
+		return false;
+	}
+	
+	if(!g_pGameConf[GameConf_PTaH]->GetOffset("ServerConsolePrint", &offset))
+	{
+		smutils->LogError(myself, "Failed to get ServerConsolePrint offset.");
+		return false;
+	}
+	
+	fn = (void *)((intptr_t)fn + offset);
+	#endif
 	
 	m_pLoggingSeverity = DETOUR_CREATE_MEMBER_PTR(LoggingSeverity, fn);
 	if (!m_pLoggingSeverity)
