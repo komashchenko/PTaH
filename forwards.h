@@ -32,8 +32,6 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_
 
-#define DETOUR_CREATE_MEMBER_PTR(name, ptr) CDetourManager::CreateDetour(GET_MEMBER_CALLBACK(name), GET_MEMBER_TRAMPOLINE(name), ptr);
-
 #include "extension.h"
 #include "netmessages.pb.h"
 
