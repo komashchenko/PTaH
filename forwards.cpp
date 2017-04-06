@@ -244,7 +244,7 @@ bool CForwardManager::Init()
 	fn = (void *)((intptr_t)fn + offset);
 	#endif
 	
-	m_pLoggingSeverity = DETOUR_CREATE_MEMBER_PTR(LoggingSeverity, fn);
+	m_pLoggingSeverity = DETOUR_CREATE_MEMBER(LoggingSeverity, fn);
 	if (!m_pLoggingSeverity)
 	{
 		smutils->LogError(myself, "Detour failed ServerConsolePrint.");
@@ -276,6 +276,10 @@ bool CForwardManager::Init()
 
 void CForwardManager::Shutdown()
 {
+	if(m_pLoggingSeverity) m_pLoggingSeverity->Destroy();
+	if(m_pCDownloadListGenerator) m_pCDownloadListGenerator->Destroy();
+	if(m_pDExecuteStringCommand) m_pDExecuteStringCommand->Destroy();
+	
 	forwards->ReleaseForward(m_pGiveNamedItem);
 	forwards->ReleaseForward(m_pGiveNamedItemPre);
 	forwards->ReleaseForward(m_pWeaponCanUse);
