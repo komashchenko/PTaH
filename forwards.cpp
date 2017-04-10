@@ -105,6 +105,7 @@ DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, chan
 	{
 		cell_t res = PLUGIN_CONTINUE;
 		g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
+		g_pPTaHForwards.m_pServerConsolePrint->PushCell(severity);
 		g_pPTaHForwards.m_pServerConsolePrint->Execute(&res);
 		
 		if(res != Pl_Continue) return LR_CONTINUE;
@@ -269,7 +270,7 @@ bool CForwardManager::Init()
 	m_pMapContentList = forwards->CreateForwardEx(NULL, ET_Hook, 1, NULL, Param_String);
 	m_pOnClientConnect = forwards->CreateForwardEx(NULL, ET_Hook, 5, NULL, Param_String, Param_String, Param_String, Param_String, Param_String);
 	m_pExecuteStringCommand = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_Cell, Param_String);
-	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 1, NULL, Param_String);
+	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_String, Param_Cell);
 	
 	return true;
 }

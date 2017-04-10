@@ -89,6 +89,5 @@ public:
 };
 
 extern CForwardManager g_pPTaHForwards;
-extern IMemoryUtils *memutils;
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_

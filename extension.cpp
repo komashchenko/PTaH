@@ -49,7 +49,6 @@ IGameConfig *g_pGameConf[4];
 IBinTools *bintools = nullptr;
 ISDKTools *sdktools = nullptr;
 IServer *iserver = nullptr;
-IMemoryUtils *memutils = nullptr;
 
 CEconItemSchema *g_pCEconItemSchema = nullptr;
 
@@ -86,9 +85,6 @@ bool PTaH::SDK_OnLoad(char *error, size_t maxlength, bool late)
 		snprintf(error, maxlength, "Could not read sm-cstrike.games: %s", conf_error);
 		return false;
 	}
-	
-	//ServerConsolePrint
-	SM_GET_IFACE(MEMORYUTILS, memutils);
 	
 	CDetourManager::Init(smutils->GetScriptingEngine(), g_pGameConf[GameConf_PTaH]);
 	

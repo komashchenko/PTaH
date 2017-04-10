@@ -40,6 +40,35 @@ enum EStickerAttributeType
     PatternRotation 
 };
 
+enum LoggingSeverity
+{
+	//-----------------------------------------------------------------------------
+	// An informative logging message.
+	//-----------------------------------------------------------------------------
+	LS_MESSAGE = 0,
+
+	//-----------------------------------------------------------------------------
+	// A warning, typically non-fatal
+	//-----------------------------------------------------------------------------
+	LS_WARNING = 1,
+
+	//-----------------------------------------------------------------------------
+	// A message caused by an Assert**() operation.
+	//-----------------------------------------------------------------------------
+	LS_ASSERT = 2,
+
+	//-----------------------------------------------------------------------------
+	// An error, typically fatal/unrecoverable.
+	//-----------------------------------------------------------------------------
+	LS_ERROR = 3,
+
+	//-----------------------------------------------------------------------------
+	// A placeholder level, higher than any legal value.
+	// Not a real severity value!
+	//-----------------------------------------------------------------------------
+	LS_HIGHEST_SEVERITY = 4,
+};
+
 methodmap CEconItemDefinition
 {
 	//!!!!!!!!!!!!!!!!!!!!! CEconItemDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
@@ -403,10 +432,11 @@ typeset PTaHCB
 	 *	Called before displaying a message in the server console (Be careful with the messages).
 	 *	-
 	 * @param sMessage				The message is printed to the server console.
+	 * @param severity				Logging severity message.
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict the display messages. Return Plugin_Continue allow display messages without changes.
 	*/
-	function Action (const char[] sMessage);
+	function Action (const char[] sMessage, LoggingSeverity severity);
 };
 
 /**

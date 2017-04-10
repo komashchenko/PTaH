@@ -40,7 +40,7 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"PTaH (P Tools and Hooks)"
 #define SMEXT_CONF_DESCRIPTION	"Expanding sdkhooks and sdktools"
-#define SMEXT_CONF_VERSION		"1.0.3"
+#define SMEXT_CONF_VERSION		"1.0.4"
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
 #define SMEXT_CONF_URL			"https://zizt.ru/ | http://hlmod.ru | https://forums.alliedmods.net/"
 #define SMEXT_CONF_LOGTAG		"PTaH"
@@ -64,7 +64,7 @@
 #define SMEXT_ENABLE_PLAYERHELPERS
 //#define SMEXT_ENABLE_DBMANAGER
 #define SMEXT_ENABLE_GAMECONF
-//#define SMEXT_ENABLE_MEMUTILS
+#define SMEXT_ENABLE_MEMUTILS
 #define SMEXT_ENABLE_GAMEHELPERS
 //#define SMEXT_ENABLE_TIMERSYS
 //#define SMEXT_ENABLE_THREADER
