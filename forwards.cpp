@@ -227,8 +227,8 @@ bool CForwardManager::Init()
 	}
 	#else
 	void * tier0 = dlopen("libtier0.so", RTLD_NOW);
-	// Thank you rom4s
-	void * fn = memutils->ResolveSymbol(tier0, "LoggingSystem_Log");
+	// Thank you rom4s, Accelerator74
+	void * fn = dlsym(tier0, "LoggingSystem_Log");
 	
 	if(!fn)
 	{
