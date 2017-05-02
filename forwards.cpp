@@ -77,7 +77,7 @@ DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 	if(szMsg != NULL && g_pPTaHForwards.m_pExecuteStringCommand->GetFunctionCount() > 0)
 	{
 		char szMsg_buf[512];
-		strcpy(szMsg_buf, szMsg);
+		V_strncpy(szMsg_buf, szMsg, sizeof(szMsg_buf));
 		cell_t res = PLUGIN_CONTINUE;
 		
 		#ifdef WIN32
@@ -356,7 +356,7 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 	if(m_pGiveNamedItemPre->GetFunctionCount() > 0)
 	{
 		char szItemByf[64];
-		strcpy(szItemByf, szItem);
+		V_strncpy(szItemByf, szItem, sizeof(szItemByf));
 		cell_t pViewNew = ((cell_t)pView);
 		cell_t res = PLUGIN_CONTINUE;
 		m_pGiveNamedItemPre->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
@@ -408,7 +408,7 @@ CBaseEntity *CForwardManager::SetModelPre(const char *sModel)
 	{
 		CBaseEntity *pEnt = META_IFACEPTR(CBaseEntity);
 		char sModelNew[128];
-		strcpy(sModelNew, sModel);
+		V_strncpy(sModelNew, sModel, sizeof(sModelNew));
 		cell_t res = PLUGIN_CONTINUE;
 		m_pSetModelPre->PushCell(gamehelpers->EntityToBCompatRef(pEnt));
 		m_pSetModelPre->PushString(playerhelpers->GetGamePlayer(gamehelpers->EntityToBCompatRef(pEnt))->GetPlayerInfo()->GetModelName());
@@ -428,8 +428,8 @@ void CForwardManager::ClientPrint(edict_t *pEdict, const char *szMsg)
 {
 	if(m_pClientPrintf->GetFunctionCount() > 0)
 	{
-		char cMsg[512];
-		strcpy(cMsg, szMsg);
+		char cMsg[1024];
+		V_strncpy(cMsg, szMsg, sizeof(cMsg));
 		cell_t res = PLUGIN_CONTINUE;
 		m_pClientPrintf->PushCell(gamehelpers->IndexOfEdict(pEdict));
 		m_pClientPrintf->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);

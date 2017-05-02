@@ -382,8 +382,7 @@ typeset PTaHCB
 	*/
 	function Action (int iClient, const char[] sModel, char sNewModel[128]);
 	
-	/** ConsolePrint/ExecuteStringCommand
-	 * ConsolePrint
+	/** ConsolePrint
 	 *
 	 *	Вызывается перед выводом сообщения в консоль игроку.
 	 *	-
@@ -391,8 +390,10 @@ typeset PTaHCB
 	 * @param sMessage			Текст сообщения.
 	 *	-
 	 * @return	Возврат Plugin_Stop или Plugin_Handled запретит вывод сообщения. Возврат Plugin_Continue разрешит вывод сообщения без изменений. Возврат Plugin_Changed разрешит вывод измененного сообщения.
-	 *	-
-	 * ExecuteStringCommand
+	*/
+	function Action (int iClient, char sMessage[1024]);
+	
+	/** ExecuteStringCommand
 	 *
 	 *	Вызывается перед выполнением команды игрока на сервере.
 	 *	-

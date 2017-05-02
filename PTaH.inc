@@ -382,8 +382,7 @@ typeset PTaHCB
 	*/
 	function Action (int iClient, const char[] sModel, char sNewModel[128]);
 	
-	/** ConsolePrint/ExecuteStringCommand
-	 * ConsolePrint
+	/** ConsolePrint
 	 *
 	 *	Called before displaying messages to the console player.
 	 *	-
@@ -392,7 +391,10 @@ typeset PTaHCB
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict display message. Return Plugin_Continue allow the display message without changes. Return Plugin_Changed allow display changed message.
 	 *	-
-	 * ExecuteStringCommand
+	 */
+	function Action (int iClient, char sMessage[1024]);
+	
+	/** ExecuteStringCommand
 	 *
 	 *	Called before executing the command player of the team on the server.
 	 *	-
