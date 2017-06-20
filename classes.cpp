@@ -94,7 +94,7 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName(const char *classn
 	return pItemDef;
 }
 
-int CEconItemDefinition::GetDefinitionIndex()
+uint16_t CEconItemDefinition::GetDefinitionIndex()
 {
 	static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
@@ -111,7 +111,7 @@ int CEconItemDefinition::GetDefinitionIndex()
 
 		ret.flags = PASSFLAG_BYREF;
 		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
+		ret.size = sizeof(uint16_t);
 		
 		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
@@ -121,7 +121,7 @@ int CEconItemDefinition::GetDefinitionIndex()
 	
 	*(void **)vptr = (void *)this;
 
-	int DefinitionIndex = -1;
+	uint16_t DefinitionIndex = 0;
 	pCallWrapper->Execute(vstk, &DefinitionIndex);
 	return DefinitionIndex;
 }

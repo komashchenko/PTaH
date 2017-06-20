@@ -226,12 +226,12 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cel
 		return pContext->ThrowNativeError("Entity %d is not weapon", params[1]);
 	}
 	
-	static int offset = -1;
-	
-	if(offset == -1 && !g_pGameConf[GameConf_PTaH]->GetOffset("m_hEconItemView", &offset))
+	static unsigned int offset = 0;
+	if(offset == 0)
 	{
-		smutils->LogError(myself, "Failed to get m_hEconItemView offset");
-		return 0;
+		sm_sendprop_info_t info;
+		gamehelpers->FindSendPropInfo("CEconEntity", "m_Item", &info);
+		offset = info.actual_offset;
 	}
 	
 	return (intptr_t)pEntity + offset;
@@ -396,6 +396,100 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 	return gamehelpers->EntityToBCompatRef(pEntityW);
 }
 
+static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext *pContext, const cell_t *params)
+{
+	static ICallWrapper *pCallWrapper = nullptr;
+	if (!pCallWrapper)
+	{
+		void *addr = nullptr;
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", &addr) || !addr)
+		{
+			smutils->LogError(myself, "Failed to get SpawnItem function.");
+			return -1;
+		}
+		
+		PassInfo pass[6];
+		PassInfo ret;
+		pass[0].flags = PASSFLAG_BYVAL;
+		pass[0].type  = PassType_Basic;
+		pass[0].size  = sizeof(uint16_t);
+		pass[1].flags = PASSFLAG_BYVAL;
+		pass[1].type  = PassType_Basic;
+		pass[1].size  = sizeof(Vector*);
+		pass[2].flags = PASSFLAG_BYVAL;
+		pass[2].type  = PassType_Basic;
+		pass[2].size  = sizeof(QAngle*);
+		pass[3].flags = PASSFLAG_BYVAL;
+		pass[3].type  = PassType_Basic;
+		pass[3].size  = sizeof(int);
+		pass[4].flags = PASSFLAG_BYVAL;
+		pass[4].type  = PassType_Basic;
+		pass[4].size  = sizeof(int);
+		pass[5].flags = PASSFLAG_BYVAL;
+		pass[5].type  = PassType_Basic;
+		pass[5].size  = sizeof(char const*);
+
+		ret.flags = PASSFLAG_BYREF;
+		ret.type = PassType_Basic;
+		ret.size = sizeof(CBaseEntity *);
+		
+		#ifdef WIN32
+		pCallWrapper = bintools->CreateCall(addr, CallConv_Cdecl, &ret, pass, 6);
+		#else
+		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, pass, 6);
+		#endif
+	}
+	
+	#ifdef WIN32
+	unsigned char vstk[sizeof(uint16_t) + sizeof(Vector*) + sizeof(QAngle*) + sizeof(int) * 2 * sizeof(const char *)];
+	#else
+	unsigned char vstk[sizeof(void *) + sizeof(uint16_t) + sizeof(Vector*) + sizeof(QAngle*) + sizeof(int) * 2 * sizeof(const char *)];
+	#endif
+	unsigned char *vptr = vstk;
+	
+	cell_t* source_vector;
+	pContext->LocalToPhysAddr(params[2], &source_vector);
+
+	cell_t* source_qangle;
+	pContext->LocalToPhysAddr(params[3], &source_qangle);
+
+	Vector vector;
+	QAngle qangle;
+
+	if(source_vector != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		vector[0] = sp_ctof(source_vector[0]);
+		vector[1] = sp_ctof(source_vector[1]);
+		vector[2] = sp_ctof(source_vector[2]);
+	}
+	if(source_qangle != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		qangle[0] = sp_ctof(source_qangle[0]);
+		qangle[1] = sp_ctof(source_qangle[1]);
+		qangle[2] = sp_ctof(source_qangle[2]);
+	}
+	
+	#ifdef POSIX
+	*(void **)vptr = nullptr;// ItemGeneration (By the code it is not used anywhere, so we will do without it :) )
+	vptr += sizeof(void *);
+	#endif
+	*(uint16_t*)vptr = params[1];
+	vptr += sizeof(uint16_t);
+	*(Vector**)vptr = &vector;
+	vptr += sizeof(Vector*);
+	*(QAngle**)vptr = &qangle;
+	vptr += sizeof(QAngle*);
+	*(int*)vptr = 1;
+	vptr += sizeof(int);
+	*(int*)vptr = 4;
+	vptr += sizeof(int);
+	*(const char **)vptr = nullptr;
+
+	CBaseEntity *pEntity = nullptr;
+	pCallWrapper->Execute(vstk, &pEntity);
+	return gamehelpers->EntityToBCompatRef(pEntity);
+}
+
 static cell_t PTaH_MD5File(IPluginContext *pContext, const cell_t *params)
 {
 	FILE *pFile;
@@ -534,6 +628,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
 	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEaterValueByType },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
+	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
 	{ "PTaH_MD5File",										PTaH_MD5File },
 	{ "PTaH_GetAddrInfo",									PTaH_GetAddrInfo },
 	{ "PTaH_Gai_StrError",									PTaH_Gai_StrError },

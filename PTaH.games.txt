@@ -30,6 +30,12 @@
 				"windows"		"\x55\x8B\xEC\x8B\x45\x08\x8D\x50\xFF"
 				"linux"			"\x55\x89\xE5\x8B\x45\x0C\x8B\x55\x08\x8D\x48\xFF" //_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi
 			}
+			"SpawnItem"
+			{
+				"library"		"server"
+				"windows"		"\x55\x8B\xEC\x51\x53\x56\x57\xE8\x2A\x2A\x2A\x2A\x8B\x5D\x08"
+				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x4C\x8B\x55\x08\x8B\x7D\x0C\x8B\x5D\x20" //_ZN15CItemGeneration9SpawnItemEiRK6VectorRK6QAngleiiPKc
+			}
 		}
 		"Keys"
 		{
@@ -40,11 +46,6 @@
 			"ServerConsolePrint"
 			{
 				"linux"			"144" // Thank you rom4s
-			}
-			"m_hEconItemView"
-			{
-				"windows"		"1768"
-				"linux"			"1788"
 			}
 			"ConnectClient"
 			{

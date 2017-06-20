@@ -494,6 +494,16 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
 
 /**
+ * Spawn item by DefinitionIndex (CEconItemView valid, so the weapon does not have bugs).
+ * @param DefIndex		DefinitionIndex items.
+ * @param origin		origin, or NULL_VECTOR.
+ * @param angles		angles, or NULL_VECTOR.
+ * -
+ * @return Returns index items.
+*/
+native int PTaH_SpawnItemFromDefIndex(int DefIndex, const float origin[3] = NULL_VECTOR, const float angles[3] = NULL_VECTOR);
+
+/**
  *	gets md5 hash file.
  * @param sFile					The path to the file.
  * @param sBuffer				The string will be recorded hash.
@@ -566,6 +576,7 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
+	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
 	MarkNativeAsOptional("PTaH_MD5File");
 	MarkNativeAsOptional("PTaH_GetAddrInfo");
 	MarkNativeAsOptional("PTaH_Gai_StrError");

@@ -40,7 +40,7 @@ enum EStickerAttributeType
 class CEconItemDefinition
 {
 public:
-	int GetDefinitionIndex();
+	uint16_t GetDefinitionIndex();
 	int GetLoadoutSlot(int def);
 	int GetNumSupportedStickerSlots();
 };
