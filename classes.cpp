@@ -91,7 +91,39 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName(const char *classn
 
 	CEconItemDefinition *pItemDef = nullptr;
 	pCallWrapper->Execute(vstk, &pItemDef);
+	
 	return pItemDef;
+}
+
+CEconItemDefinition *CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIndex)
+{
+	static int offset = -1;
+	if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinitionByDefIndex", &offset) || offset == -1)
+	{
+		smutils->LogError(myself, "Failed to get GetItemDefinitionByDefIndex offset");
+		return nullptr;
+	}
+	
+	if(DefIndex > 0)
+	{
+		//See GetItemDefinitionByMapIndex
+		struct ItemMapMember
+		{
+			uint16_t DefIndex;
+			CEconItemDefinition* ItemDefinition;
+			int Unknown;
+		};
+		
+		ItemMapMember *MapMember = nullptr;
+		int iMaxIdx = *(int *)((intptr_t)pSchema + offset + 20);
+		intptr_t ItemMap = *(intptr_t *)((intptr_t)pSchema + offset);
+		for(int i = 0; i < iMaxIdx; i++)
+		{
+			MapMember = (ItemMapMember *)(ItemMap + i * sizeof(ItemMapMember));
+			if(MapMember->DefIndex == DefIndex) return MapMember->ItemDefinition;
+		}
+	}
+	return nullptr;
 }
 
 uint16_t CEconItemDefinition::GetDefinitionIndex()
@@ -123,7 +155,7 @@ uint16_t CEconItemDefinition::GetDefinitionIndex()
 
 	uint16_t DefinitionIndex = 0;
 	pCallWrapper->Execute(vstk, &DefinitionIndex);
-	return DefinitionIndex;
+	return 0;
 }
 
 int CEconItemDefinition::GetLoadoutSlot(int def)
@@ -193,6 +225,51 @@ int CEconItemDefinition::GetNumSupportedStickerSlots()
 	int NumSupportedStickerSlots = -1;
 	pCallWrapper->Execute(vstk, &NumSupportedStickerSlots);
 	return NumSupportedStickerSlots;
+}
+
+char *CEconItemDefinition::GetClassName()
+{
+	static int offset = -1;
+	if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetClassName", &offset) || offset == -1)
+	{
+		smutils->LogError(myself, "Failed to get GetClassName offset");
+		return nullptr;
+	}
+	return *(char **)(this + offset);
+}
+
+void *CEconItemDefinition::GetCCSWeaponData()
+{
+	static ICallWrapper *pCallWrapper = nullptr;
+	if(!pCallWrapper)
+	{
+		void *addr = nullptr;
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("GetCCSWeaponDataFromDef", &addr) || !addr)
+		{
+			smutils->LogError(myself, "Failed to get GetCCSWeaponDataFromDef function.");
+		}
+		PassInfo ret;
+		PassInfo pass[1];
+		ret.flags = PASSFLAG_BYVAL;
+		ret.type = PassType_Basic;
+		ret.size = sizeof(void *);
+ 		pass[0].flags = PASSFLAG_BYVAL;
+ 		pass[0].type = PassType_Basic;
+ 		pass[0].size = sizeof(CEconItemDefinition *);
+		
+		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, pass, 1);
+	}
+	
+	unsigned char vstk[sizeof(const char *)];
+	unsigned char *vptr = vstk;
+	
+	*(CEconItemDefinition **)vptr = this;
+	
+	void *pCCSWeaponData = nullptr;
+	
+	pCallWrapper->Execute(vstk, &pCCSWeaponData);
+	
+	return pCCSWeaponData;
 }
 
 int CEconItemView::GetCustomPaintKitIndex()
@@ -683,7 +760,7 @@ char *CEconItemView::GetCustomName()
 
 int CEconItemView::GetKillEaterValueByType(unsigned int type)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
+	/*static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
 	{
 		int offset = -1;
@@ -715,5 +792,6 @@ int CEconItemView::GetKillEaterValueByType(unsigned int type)
 
 	int KillEaterValueByType = -1;
 	pCallWrapper->Execute(vstk, &KillEaterValueByType);
-	return KillEaterValueByType;
+	return KillEaterValueByType;*/
+	return -1;
 }

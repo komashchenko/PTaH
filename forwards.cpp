@@ -113,6 +113,16 @@ DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, chan
 	return DETOUR_MEMBER_CALL(LoggingSeverity)(channelID, severity, color, pMessage);
 }
 
+DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, void *, const char *, szItem, int, iTeam, bool, bUnknown, void *, vUnknown)
+{
+	if(g_pPTaHForwards.IgnoredCEconItemView)
+	{
+		g_pPTaHForwards.IgnoredCEconItemView = false;
+		return nullptr;
+	}
+	return DETOUR_MEMBER_CALL(FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bUnknown, vUnknown);
+}
+
 #ifdef WIN32
 //https://github.com/alliedmodders/sourcemod/blob/237db0504c7a59e394828446af3e8ca3d53ef647/extensions/sdktools/vglobals.cpp#L149
 size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
@@ -211,6 +221,14 @@ bool CForwardManager::Init()
 	}
 	else m_pDExecuteStringCommand->EnableDetour();
 	
+	m_pFindMatchingWeaponsForTeamLoadout = DETOUR_CREATE_MEMBER(FindMatchingWeaponsForTeamLoadout, "FindMatchingWeaponsForTeamLoadout");
+	if (!m_pFindMatchingWeaponsForTeamLoadout)
+	{
+		smutils->LogError(myself, "Detour failed FindMatchingWeaponsForTeamLoadout.");
+		return false;
+	}
+	else m_pFindMatchingWeaponsForTeamLoadout->EnableDetour();
+	
 	
 	#ifdef WIN32
 	HMODULE tier0 = GetModuleHandle("tier0.dll");
@@ -262,7 +280,7 @@ bool CForwardManager::Init()
 
 	
 	m_pGiveNamedItem = forwards->CreateForwardEx(NULL, ET_Ignore, 4, NULL, Param_Cell, Param_String, Param_Cell, Param_Cell);
-	m_pGiveNamedItemPre = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_String, Param_CellByRef);
+	m_pGiveNamedItemPre = forwards->CreateForwardEx(NULL, ET_Hook, 4, NULL, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef);
 	m_pWeaponCanUse = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_Cell, Param_Cell);
 	m_pSetModel = forwards->CreateForwardEx(NULL, ET_Ignore, 2, NULL, Param_Cell, Param_String);
 	m_pSetModelPre = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_String, Param_String);
@@ -280,6 +298,7 @@ void CForwardManager::Shutdown()
 	if(m_pLoggingSeverity) m_pLoggingSeverity->Destroy();
 	if(m_pCDownloadListGenerator) m_pCDownloadListGenerator->Destroy();
 	if(m_pDExecuteStringCommand) m_pDExecuteStringCommand->Destroy();
+	if(m_pFindMatchingWeaponsForTeamLoadout) m_pFindMatchingWeaponsForTeamLoadout->Destroy();
 	
 	forwards->ReleaseForward(m_pGiveNamedItem);
 	forwards->ReleaseForward(m_pGiveNamedItemPre);
@@ -335,7 +354,6 @@ void CForwardManager::UnhookClient(int client)
 	}
 }
 
-
 CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried)
 {
 	if(m_pGiveNamedItem->GetFunctionCount() > 0)
@@ -358,15 +376,25 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 		char szItemByf[64];
 		V_strncpy(szItemByf, szItem, sizeof(szItemByf));
 		cell_t pViewNew = ((cell_t)pView);
+		cell_t IgnoredCEconItemViewNew = false;
 		cell_t res = PLUGIN_CONTINUE;
 		m_pGiveNamedItemPre->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
 		m_pGiveNamedItemPre->PushStringEx(szItemByf, sizeof(szItemByf), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pGiveNamedItemPre->PushCellByRef(&pViewNew);
+		m_pGiveNamedItemPre->PushCellByRef(&IgnoredCEconItemViewNew);
 		m_pGiveNamedItemPre->Execute(&res);
 
 		if(res != Pl_Continue)
 		{
-			if(res == Pl_Changed) RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried));
+			if(res == Pl_Changed)
+			{
+				if(IgnoredCEconItemViewNew)
+				{
+					g_pPTaHForwards.IgnoredCEconItemView = true;
+					pViewNew = 0;
+				}
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried));
+			}
 			else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
 		}
 	}

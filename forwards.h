@@ -75,6 +75,8 @@ public:
 
 	IChangeableForward *m_pGiveNamedItem;
 	IChangeableForward *m_pGiveNamedItemPre;
+	bool IgnoredCEconItemView;
+	CDetour *m_pFindMatchingWeaponsForTeamLoadout;
 	IChangeableForward *m_pWeaponCanUse;
 	IChangeableForward *m_pSetModel;
 	IChangeableForward *m_pSetModelPre;

@@ -101,6 +101,26 @@ methodmap CEconItemDefinition
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetNumSupportedStickerSlots();
+	
+	/**
+	 *	Получает ClassName.
+	 * @param sBuf			строка.
+	 * @param iLen			размер строки.
+	 *	-
+	 * @return	Возвращает длину ClassName.
+	 *	-
+	 * @error CEconItemDefinition == NULL.
+	*/
+	public native int GetClassName(char[] sBuf, int iLen);
+	
+	/**
+	 *	Получает CCSWeaponData.
+	 *	-
+	 * @return	Возвращает CCSWeaponData.
+	 *	-
+	 * @error CEconItemDefinition == NULL.
+	*/
+	public native Address GetCCSWeaponData();
 };
 
 methodmap CEconItemView
@@ -268,7 +288,7 @@ methodmap CEconItemView
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
-	public native int GetStatTrakKill();
+	//public native int GetStatTrakKill(); - удалено Valve 17.8.2017
 };
 
 methodmap AddrInfo
@@ -342,10 +362,11 @@ typeset PTaHCB
 	 * @param iClient			Индекс игрока.
 	 * @param sClassname		Класснейм оружия.
 	 * @param Item				Кастюмизация предмета.
+	 @param IgnoredCEconItemView 	Если true то CEconItemView будет проигнорировано.
 	 *	-
 	 * @return	Возврат Plugin_Stop или Plugin_Handled остановит выдачу предмета. Возврат Plugin_Continue разрешит выдачу предмета без изменений. Возврат Plugin_Changed разрешит выдачу примета с изминениями.
 	*/
-	function Action (int iClient, char sClassname[64], CEconItemView &Item);
+	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView);
 	
 	/** WeaponCanUse
 	 *
@@ -459,6 +480,14 @@ native bool PTaH(PTaH_Hook hk, PTaH_HookType type, PTaHCB callback);
 native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassName);
 
 /**
+ *	Получает CEconItemDefinition по DefinitionIndex.
+ * @param DefIndex					DefinitionIndex оружия.
+ *	-
+ * @return	Возвращает CEconItemDefinition.
+*/
+native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int DefIndex);
+
+/**
  *	Получает CEconItemView оружия клиента.
  * @param iClient					Индекс клиента.
  * @param iTeam						Индекс команды.
@@ -555,9 +584,12 @@ public __ext_PTaH_SetNTVOptional()
 {
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
+	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
+	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
+	MarkNativeAsOptional("CEconItemDefinition.GetCCSWeaponData");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
@@ -582,5 +614,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("AddrInfo.Family.get");
 	MarkNativeAsOptional("AddrInfo.GetIP");
 	MarkNativeAsOptional("AddrInfo.NextIP.get");
+	MarkNativeAsOptional("AddrInfo.ClearMem");
 }
 #endif

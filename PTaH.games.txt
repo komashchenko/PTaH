@@ -36,6 +36,18 @@
 				"windows"		"\x55\x8B\xEC\x51\x53\x56\x57\xE8\x2A\x2A\x2A\x2A\x8B\x5D\x08"
 				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x4C\x8B\x55\x08\x8B\x7D\x0C\x8B\x5D\x20" //_ZN15CItemGeneration9SpawnItemEiRK6VectorRK6QAngleiiPKc
 			}
+			"FindMatchingWeaponsForTeamLoadout"
+			{
+				"library"		"server"
+				"windows"		"\x55\x8B\xEC\x83\xEC\x08\x53\x56\x57\x89\x4D\xF8"
+				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x3C\x0F\xB6\x4D\x14" //_ZN9CCSPlayer33FindMatchingWeaponsForTeamLoadoutEPKcibR10CUtlVectorIP13CEconItemView10CUtlMemoryIS4_iEE
+			}
+			"GetCCSWeaponDataFromDef"
+			{
+				"library"		"server"
+				"windows"		"\x8B\x01\x56\x8B\x35\x2A\x2A\x2A\x2A\xFF\x10\x0F\xB7\xC0\xB9\x2A\x2A\x2A\x2A\x50\xFF\x56\x08\x5E\xC3"
+				"linux"			"\x55\x31\xC0\x89\xE5\x53\x83\xEC\x14\x8B\x55\x08\x85\xD2"
+			}
 		}
 		"Keys"
 		{
@@ -62,6 +74,11 @@
 				"windows"		"42"
 				"linux"			"41"
 			}
+			"GetItemDefinitionByDefIndex"
+			{
+				"windows"		"208"
+				"linux"			"208"
+			}
 			"GetDefinitionIndex"
 			{
 				"windows"		"0"
@@ -69,8 +86,13 @@
 			}
 			"GetNumSupportedStickerSlots"
 			{
-				"windows"		"41"
-				"linux"			"42"
+				"windows"		"44"
+				"linux"			"45"
+			}
+			"GetClassName"
+			{
+				"windows"		"448"
+				"linux"			"448"
 			}
 			"GetCustomPaintKitIndex"
 			{
@@ -142,11 +164,11 @@
 				"windows"		"22"
 				"linux"			"23"
 			}
-			"GetKillEaterValueByType"
-			{
-				"windows"		"33"
-				"linux"			"34"
-			}
+			//"GetKillEaterValueByType" removed Valve 8/17/2017
+			//{
+			//	"windows"		"33"
+			//	"linux"			"34"
+			//}
 		}
 	}
 }

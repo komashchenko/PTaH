@@ -89,6 +89,11 @@ static cell_t PTaH_GetItemDefinitionByName(IPluginContext *pContext, const cell_
 	return (cell_t)g_pCEconItemSchema->GetItemDefinitionByName((const char *)strSource);
 }
 
+static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext *pContext, const cell_t *params)
+{
+	return (cell_t)g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
+}
+
 static cell_t PTaH_GetDefinitionIndex(IPluginContext *pContext, const cell_t *params)
 {
 	if(params[1]) return ((CEconItemDefinition *)params[1])->GetDefinitionIndex();
@@ -104,6 +109,24 @@ static cell_t PTaH_GetLoadoutSlot(IPluginContext *pContext, const cell_t *params
 static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext *pContext, const cell_t *params)
 {
 	if(params[1]) return ((CEconItemDefinition *)params[1])->GetNumSupportedStickerSlots();
+	return pContext->ThrowNativeError("CEconItemDefinition invalid");
+}
+
+static cell_t PTaH_GetClassName(IPluginContext *pContext, const cell_t *params)
+{
+	if(params[1])
+	{
+		size_t numBytes;
+		char *buf = ((CEconItemDefinition *)params[1])->GetClassName();
+		pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
+		return numBytes;
+	}
+	return pContext->ThrowNativeError("CEconItemDefinition invalid");
+}
+
+static cell_t PTaH_GetCCSWeaponData(IPluginContext *pContext, const cell_t *params)
+{
+	if(params[1]) return (cell_t)((CEconItemDefinition *)params[1])->GetCCSWeaponData();
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
@@ -315,7 +338,7 @@ static cell_t PTaH_GetOrigin(IPluginContext *pContext, const cell_t *params)
 
 static cell_t PTaH_GetKillEaterValueByType(IPluginContext *pContext, const cell_t *params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetKillEaterValueByType(0/*0 returns StatTrakKill, the rest is not clear*/);
+	if(params[1]) return pContext->ThrowNativeError("GetStatTrakKill removed Valve 8/17/2017");//((CEconItemView *)params[1])->GetKillEaterValueByType(0/*0 returns StatTrakKill, the rest is not clear*/);
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
@@ -608,9 +631,12 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
 	{ "PTaH",												PTaH_ },
 	{ "PTaH_GetItemDefinitionByName",						PTaH_GetItemDefinitionByName },
+	{ "PTaH_GetItemDefinitionByDefIndex",					PTaH_GetItemDefinitionByDefIndex },
 	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },
+	{ "CEconItemDefinition.GetClassName",					PTaH_GetClassName },
+	{ "CEconItemDefinition.GetCCSWeaponData",				PTaH_GetCCSWeaponData },
 	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadout },
 	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromWeapon },
 	{ "CEconItemView.GetCustomPaintKitIndex",				PTaH_GetCustomPaintKitIndex },

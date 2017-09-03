@@ -43,6 +43,8 @@ public:
 	uint16_t GetDefinitionIndex();
 	int GetLoadoutSlot(int def);
 	int GetNumSupportedStickerSlots();
+	char *GetClassName();
+	void *GetCCSWeaponData();
 };
 
 class CEconItemSchema
@@ -52,6 +54,7 @@ private:
 public:
 	CEconItemSchema();
 	CEconItemDefinition *GetItemDefinitionByName(const char *classname);
+	CEconItemDefinition *GetItemDefinitionByDefIndex(uint16_t DefIndex);
 };
 
 class CEconItemView

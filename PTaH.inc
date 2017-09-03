@@ -101,6 +101,26 @@ methodmap CEconItemDefinition
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetNumSupportedStickerSlots();
+	
+	/**
+	 *	Gets ClassName.
+	 * @param sBuf			line.
+	 * @param iLen			row size.
+	 *	-
+	 * @return	Returns length ClassName.
+	 *	-
+	 * @error CEconItemDefinition == NULL.
+	*/
+	public native int GetClassName(char[] sBuf, int iLen);
+	
+	/**
+	 *	Gets CCSWeaponData.
+	 *	-
+	 * @return	Returns CCSWeaponData.
+	 *	-
+	 * @error CEconItemDefinition == NULL.
+	*/
+	public native Address GetCCSWeaponData();
 };
 
 methodmap CEconItemView
@@ -268,7 +288,7 @@ methodmap CEconItemView
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
-	public native int GetStatTrakKill();
+	//public native int GetStatTrakKill(); - removed Valve 8/17/2017
 };
 
 methodmap AddrInfo
@@ -342,10 +362,11 @@ typeset PTaHCB
 	 * @param iClient			Player Index.
 	 * @param sClassname		Classname weapons.
 	 * @param Item				Customization item.
+	 * @param IgnoredCEconItemView	If true ignores CEconItemView the item.
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Returns Plugin_Changed allow issuance item with changes.
 	*/
-	function Action (int iClient, char sClassname[64], CEconItemView &Item);
+	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView);
 	
 	/** WeaponCanUse
 	 *
@@ -453,11 +474,19 @@ native bool PTaH(PTaH_Hook hk, PTaH_HookType type, PTaHCB callback);
 
 /**
  *	Gets CEconItemDefinition from ClassName weapons.
- * @param sClassName					ClassName weapons.
+ * @param sClassName				ClassName weapons.
  *	-
  * @return	Returns CEconItemDefinition.
 */
 native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassName);
+
+/**
+ *	Gets CEconItemDefinition from DefinitionIndex.
+ * @param DefIndex					DefinitionIndex weapons.
+ *	-
+ * @return	Returns CEconItemDefinition.
+*/
+native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int DefIndex);
 
 /**
  *	Gets CEconItemView weapons client.
@@ -494,12 +523,12 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
 
 /**
- * Spawn item by DefinitionIndex (CEconItemView valid, so the weapon does not have bugs).
- * @param DefIndex		DefinitionIndex items.
- * @param origin		origin, or NULL_VECTOR.
- * @param angles		angles, or NULL_VECTOR.
- * -
- * @return Returns index items.
+ *	Spawn item by DefinitionIndex (CEconItemView valid, so the weapon does not have bugs).
+ * @param DefIndex				DefinitionIndex items.
+ * @param origin				origin, или NULL_VECTOR.
+ * @param angles				angles, или NULL_VECTOR.
+ *	-
+ * @return	Returns index items.
 */
 native int PTaH_SpawnItemFromDefIndex(int DefIndex, const float origin[3] = NULL_VECTOR, const float angles[3] = NULL_VECTOR);
 
@@ -556,9 +585,12 @@ public __ext_PTaH_SetNTVOptional()
 {
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
+	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
+	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
+	MarkNativeAsOptional("CEconItemDefinition.GetCCSWeaponData");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
@@ -583,5 +615,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("AddrInfo.Family.get");
 	MarkNativeAsOptional("AddrInfo.GetIP");
 	MarkNativeAsOptional("AddrInfo.NextIP.get");
+	MarkNativeAsOptional("AddrInfo.ClearMem");
 }
 #endif
