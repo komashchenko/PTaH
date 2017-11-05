@@ -32,7 +32,7 @@
 #include "extension.h"
 #include "forwards.h"
 #include "classes.h"
-#include <tier0/dbg.h> 
+#include "tier0/dbg.h"
 
 CForwardManager g_pPTaHForwards;
 
@@ -101,7 +101,8 @@ DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 
 DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, channelID, LoggingSeverity_t, severity, Color, color, const tchar *, pMessage)
 {
-	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0)
+	//Thread_Id == ke::GetCurrentThreadId() - Temporary solution to avoid crashes
+	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0 && g_pPTaHForwards.Thread_Id == ke::GetCurrentThreadId())
 	{
 		cell_t res = PLUGIN_CONTINUE;
 		g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
@@ -165,6 +166,8 @@ size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
 
 bool CForwardManager::Init()
 {
+	Thread_Id = ke::GetCurrentThreadId();
+	
 	int offset = -1;
 	
 	if(!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &offset))
@@ -270,7 +273,6 @@ bool CForwardManager::Init()
 		return false;
 	}
 	else m_pLoggingSeverity->EnableDetour();
-	
 	
 	
 	

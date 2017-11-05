@@ -28,6 +28,8 @@
  *
  * Version: $Id$
  */
+class CEconItemAttributeDefinition;
+class CAttribute_String;
 
 enum EStickerAttributeType 
 { 
@@ -41,10 +43,9 @@ class CEconItemDefinition
 {
 public:
 	uint16_t GetDefinitionIndex();
-	int GetLoadoutSlot(int def);
+	int GetLoadoutSlot(int iTeam);
 	int GetNumSupportedStickerSlots();
 	char *GetClassName();
-	void *GetCCSWeaponData();
 };
 
 class CEconItemSchema
@@ -55,6 +56,18 @@ public:
 	CEconItemSchema();
 	CEconItemDefinition *GetItemDefinitionByName(const char *classname);
 	CEconItemDefinition *GetItemDefinitionByDefIndex(uint16_t DefIndex);
+	
+	CEconItemAttributeDefinition *GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
+};
+
+class IEconItemAttributeIterator
+{
+public:
+	virtual ~IEconItemAttributeIterator() {	};
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, unsigned int) = 0;
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, float) = 0;
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, CAttribute_String const&) = 0;
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, Vector const&) = 0;
 };
 
 class CEconItemView
@@ -74,7 +87,61 @@ public:
 	int GetFlags();
 	int GetOrigin();
 	char *GetCustomName();
-	int GetKillEaterValueByType(unsigned int type);
+	int GetKillEaterValue();
+	
+	void IterateAttributes(IEconItemAttributeIterator *AttributeIterator);
 };
+
+class IEconItemUntypedAttributeIterator : public IEconItemAttributeIterator
+{
+public:
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, unsigned int);
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, float);
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, CAttribute_String const&);
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, Vector const&);
+	virtual bool OnIterateAttributeValueUntyped(CEconItemAttributeDefinition const*) = 0;
+};
+
+class CAttributeIterator_HasAttribute : public IEconItemUntypedAttributeIterator
+{
+public:
+	CAttributeIterator_HasAttribute(CEconItemAttributeDefinition const*);
+	virtual bool OnIterateAttributeValueUntyped(CEconItemAttributeDefinition const*);
+
+	CEconItemAttributeDefinition const *m_pItemAttrDef;
+	bool m_found;
+};
+
+class CAttributeIterator_GetTypedAttributeValueBase : public IEconItemAttributeIterator
+{
+public:
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, unsigned int) { return true; }
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, float) { return true; }
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, CAttribute_String const&) { return true; }
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, Vector const&) { return true; }
+};
+
+template <class A, class B> class CAttributeIterator_GetTypedAttributeValue : public CAttributeIterator_GetTypedAttributeValueBase
+{
+public:
+	CAttributeIterator_GetTypedAttributeValue(CEconItemAttributeDefinition const *pItemAttrDef, B *value)
+		: m_pItemAttrDef(pItemAttrDef), m_value(value), m_found(false)
+	{
+	}
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const *pItemAttrDef, A value)
+	{
+		if (m_pItemAttrDef == pItemAttrDef)
+		{
+			m_found = true;
+			*m_value = (B)value;
+		}
+		return !m_found;
+	}
+
+	CEconItemAttributeDefinition const *m_pItemAttrDef;
+	B *m_value;
+	bool m_found;
+};
+
 
 extern CEconItemSchema *g_pCEconItemSchema;

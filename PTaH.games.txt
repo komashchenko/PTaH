@@ -16,13 +16,7 @@
 				"windows"		"\x55\x8B\xEC\x81\xEC\x0C\x05\x00\x00\x56"
 				"linux"			"\x55\x89\xE5\x83\xEC\x18\x89\x5D\xF8\x8B\x5D\x08\x89\x75\xFC\x8B\x75\x0C\x89\x1C\x24\x89\x74\x24\x04\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A" //Thank you Peace-Maker | _ZN11CGameClient20ExecuteStringCommandEPKc
 			}
-			"GetItemSchema"
-			{
-				"library"		"server"
-				"windows"		"\xA1\x2A\x2A\x2A\x2A\x85\xC0\x75\x2A\xA1\x2A\x2A\x2A\x2A\x56"
-				"linux"			"\x55\x89\xE5\x83\xEC\x08\xE8\x2A\x2A\x2A\x2A\xC9\x83\xC0\x04\xC3" //_Z13GetItemSchemav
-			}
-			//CCStrike15ItemDefinition__GetLoadoutSlot(CCStrike15ItemDefinition *this, int def)
+			//CCStrike15ItemDefinition__GetLoadoutSlot(CCStrike15ItemDefinition *this, int team)
 			//CEconItemDefinition::GetLoadoutSlot() - does not work, always returns 0
 			"GetLoadoutSlot"
 			{
@@ -30,23 +24,11 @@
 				"windows"		"\x55\x8B\xEC\x8B\x45\x08\x8D\x50\xFF"
 				"linux"			"\x55\x89\xE5\x8B\x45\x0C\x8B\x55\x08\x8D\x48\xFF" //_ZNK24CCStrike15ItemDefinition14GetLoadoutSlotEi
 			}
-			"SpawnItem"
-			{
-				"library"		"server"
-				"windows"		"\x55\x8B\xEC\x51\x53\x56\x57\xE8\x2A\x2A\x2A\x2A\x8B\x5D\x08"
-				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x4C\x8B\x55\x08\x8B\x7D\x0C\x8B\x5D\x20" //_ZN15CItemGeneration9SpawnItemEiRK6VectorRK6QAngleiiPKc
-			}
 			"FindMatchingWeaponsForTeamLoadout"
 			{
 				"library"		"server"
 				"windows"		"\x55\x8B\xEC\x83\xEC\x08\x53\x56\x57\x89\x4D\xF8"
 				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x3C\x0F\xB6\x4D\x14" //_ZN9CCSPlayer33FindMatchingWeaponsForTeamLoadoutEPKcibR10CUtlVectorIP13CEconItemView10CUtlMemoryIS4_iEE
-			}
-			"GetCCSWeaponDataFromDef"
-			{
-				"library"		"server"
-				"windows"		"\x8B\x01\x56\x8B\x35\x2A\x2A\x2A\x2A\xFF\x10\x0F\xB7\xC0\xB9\x2A\x2A\x2A\x2A\x50\xFF\x56\x08\x5E\xC3"
-				"linux"			"\x55\x31\xC0\x89\xE5\x53\x83\xEC\x14\x8B\x55\x08\x85\xD2"
 			}
 		}
 		"Keys"
@@ -69,15 +51,15 @@
 				"windows"		"52"
 				"linux"			"53"
 			}
-			"GetItemDefintionByName"
-			{
-				"windows"		"42"
-				"linux"			"41"
-			}
 			"GetItemDefinitionByDefIndex"
 			{
 				"windows"		"208"
 				"linux"			"208"
+			}
+			"GetAttributeDefinitionInterface"
+			{
+				"windows"		"27"
+				"linux"			"27"
 			}
 			"GetDefinitionIndex"
 			{
@@ -164,11 +146,11 @@
 				"windows"		"22"
 				"linux"			"23"
 			}
-			//"GetKillEaterValueByType" removed Valve 8/17/2017
-			//{
-			//	"windows"		"33"
-			//	"linux"			"34"
-			//}
+			"IterateAttributes"
+			{
+				"windows"		"25"
+				"linux"			"26"
+			}
 		}
 	}
 }
