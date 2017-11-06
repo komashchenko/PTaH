@@ -222,7 +222,8 @@ methodmap CEconItemView
 	*/
 	public bool IsCustomItemView() 
     { 
-		return this.GetAccountID() != 0;
+		int iBuf = this.GetAccountID();
+		return iBuf != 0 && iBuf != 1;
     }
 	
 	/**
