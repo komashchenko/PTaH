@@ -39,7 +39,7 @@ CEconItemSchema::CEconItemSchema()
 	if(!pCallWrapper)
 	{
 		void *addr = nullptr;
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("GetItemSchema", &addr) || !addr)
+		if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", &addr) || !addr)
 		{
 			smutils->LogError(myself, "Failed to get GetItemSchema function.");
 		}
@@ -63,10 +63,10 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName(const char *classn
 	{
 		int offset = -1;
 		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefintionByName", &offset) || offset == -1)
+		if(!g_pGameConf[GameConf_CSST]->GetOffset("GetItemDefintionByName", &offset) || offset == -1)
 		{
 			smutils->LogError(myself, "Failed to get GetItemDefintionByName offset");
-			return NULL;
+			return nullptr;
 		}
 		
 		PassInfo pass[1];
@@ -126,6 +126,44 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 	return nullptr;
 }
 
+CEconItemAttributeDefinition *CEconItemSchema::GetAttributeDefinitionByDefIndex(uint16_t DefIndex)
+{
+	static ICallWrapper *pCallWrapper = nullptr;
+	if (!pCallWrapper)
+	{
+		int offset = -1;
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetAttributeDefinitionInterface", &offset) || offset == -1)
+		{
+			smutils->LogError(myself, "Failed to get GetAttributeDefinitionInterface offset.");
+			return nullptr;
+		}
+		
+		PassInfo pass[1];
+		PassInfo ret;
+		pass[0].flags = PASSFLAG_BYVAL;
+		pass[0].type = PassType_Basic;
+		pass[0].size = sizeof(int);
+
+		ret.flags = PASSFLAG_BYVAL;
+		ret.type = PassType_Basic;
+		ret.size = sizeof(CEconItemAttributeDefinition *);
+
+		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 1);
+	}
+
+	unsigned char vstk[sizeof(void *) + sizeof(int)];
+	unsigned char *vptr = vstk;
+
+	*(void **)vptr = pSchema;
+	vptr += sizeof(void *);
+	*(int *)vptr = DefIndex;
+
+	CEconItemAttributeDefinition *pItemAttrDef;
+	pCallWrapper->Execute(vstk, &pItemAttrDef);
+
+	return pItemAttrDef;
+}
+
 uint16_t CEconItemDefinition::GetDefinitionIndex()
 {
 	static ICallWrapper *pCallWrapper = nullptr;
@@ -155,10 +193,10 @@ uint16_t CEconItemDefinition::GetDefinitionIndex()
 
 	uint16_t DefinitionIndex = 0;
 	pCallWrapper->Execute(vstk, &DefinitionIndex);
-	return 0;
+	return DefinitionIndex;
 }
 
-int CEconItemDefinition::GetLoadoutSlot(int def)
+int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 {
 	static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
@@ -168,7 +206,7 @@ int CEconItemDefinition::GetLoadoutSlot(int def)
 		if(!g_pGameConf[GameConf_PTaH]->GetMemSig("GetLoadoutSlot", &addr) || !addr)
 		{
 			smutils->LogError(myself, "Failed to get GetLoadoutSlot location");
-			return def;
+			return -1;
 		}
 		
 		PassInfo pass[1];
@@ -188,9 +226,9 @@ int CEconItemDefinition::GetLoadoutSlot(int def)
 
 	*(void **)vptr = this;
 	vptr += sizeof(void *);
-	*(int *)vptr = def;
+	*(int *)vptr = iTeam;
 
-	int LoadoutSlot = def;
+	int LoadoutSlot = -1;
 	pCallWrapper->Execute(vstk, &LoadoutSlot);
 	return LoadoutSlot;
 }
@@ -236,40 +274,6 @@ char *CEconItemDefinition::GetClassName()
 		return nullptr;
 	}
 	return *(char **)(this + offset);
-}
-
-void *CEconItemDefinition::GetCCSWeaponData()
-{
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
-	{
-		void *addr = nullptr;
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("GetCCSWeaponDataFromDef", &addr) || !addr)
-		{
-			smutils->LogError(myself, "Failed to get GetCCSWeaponDataFromDef function.");
-		}
-		PassInfo ret;
-		PassInfo pass[1];
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
- 		pass[0].flags = PASSFLAG_BYVAL;
- 		pass[0].type = PassType_Basic;
- 		pass[0].size = sizeof(CEconItemDefinition *);
-		
-		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, pass, 1);
-	}
-	
-	unsigned char vstk[sizeof(const char *)];
-	unsigned char *vptr = vstk;
-	
-	*(CEconItemDefinition **)vptr = this;
-	
-	void *pCCSWeaponData = nullptr;
-	
-	pCallWrapper->Execute(vstk, &pCCSWeaponData);
-	
-	return pCCSWeaponData;
 }
 
 int CEconItemView::GetCustomPaintKitIndex()
@@ -758,40 +762,47 @@ char *CEconItemView::GetCustomName()
 	return CustomName;
 }
 
-int CEconItemView::GetKillEaterValueByType(unsigned int type)
+// Thank you Kailo
+int CEconItemView::GetKillEaterValue() 
 {
-	/*static ICallWrapper *pCallWrapper = nullptr;
+	CEconItemAttributeDefinition *pItemAttrDef = g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(80); //"kill eater"
+	unsigned int KillEaterValue;
+	
+	CAttributeIterator_GetTypedAttributeValue<unsigned int, unsigned int> it(pItemAttrDef, &KillEaterValue);
+	this->IterateAttributes(&it);
+	
+	if (it.m_found) return KillEaterValue;
+	return -1;
+}
+
+void CEconItemView::IterateAttributes(IEconItemAttributeIterator *AttributeIterator)
+{
+	static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
 	{
 		int offset = -1;
 		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetKillEaterValueByType", &offset) || offset == -1)
+		if(!g_pGameConf[GameConf_PTaH]->GetOffset("IterateAttributes", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetKillEaterValueByType offset");
-			return -1;
+			smutils->LogError(myself, "Failed to get IterateAttributes offset");
+			return;
 		}
 		
 		PassInfo pass[1];
+		
 		pass[0].flags = PASSFLAG_BYVAL;
 		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(unsigned int);
-
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 1);
+		pass[0].size  = sizeof(IEconItemAttributeIterator *);
+		
+		pCallWrapper = bintools->CreateVCall(offset, 0, 0, NULL, pass, 1);
 	}
 	
-	unsigned char vstk[sizeof(void *) + sizeof(unsigned int)];
+	unsigned char vstk[sizeof(void *) + sizeof(IEconItemAttributeIterator *)];
 	unsigned char *vptr = vstk;
 
 	*(void **)vptr = this;
 	vptr += sizeof(void *);
-	*(unsigned int *)vptr = type;
+	*(IEconItemAttributeIterator **)vptr = AttributeIterator;
 
-	int KillEaterValueByType = -1;
-	pCallWrapper->Execute(vstk, &KillEaterValueByType);
-	return KillEaterValueByType;*/
-	return -1;
+	pCallWrapper->Execute(vstk, NULL);
 }

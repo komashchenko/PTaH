@@ -85,13 +85,13 @@ methodmap CEconItemDefinition
 	
 	/**
 	 *	Gets LoadoutSlot.
-	 * @param def		default value.
+	 * @param iTeam		Index Commands.
 	 *	-
 	 * @return	Returns LoadoutSlot.
 	 *	-
 	 * @error CEconItemDefinition == NULL.
 	*/
-	public native int GetLoadoutSlot(int def = -1);
+	public native int GetLoadoutSlot(int iTeam = -1);
 	
 	/**
 	 *	Gets the amount slots for Sticker.
@@ -112,15 +112,6 @@ methodmap CEconItemDefinition
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetClassName(char[] sBuf, int iLen);
-	
-	/**
-	 *	Gets CCSWeaponData.
-	 *	-
-	 * @return	Returns CCSWeaponData.
-	 *	-
-	 * @error CEconItemDefinition == NULL.
-	*/
-	public native Address GetCCSWeaponData();
 };
 
 methodmap CEconItemView
@@ -231,7 +222,8 @@ methodmap CEconItemView
 	*/
 	public bool IsCustomItemView() 
     { 
-		return this.GetAccountID() != 0 ? true:false;
+		int iBuf = this.GetAccountID();
+		return iBuf != 0 && iBuf != 1;
     }
 	
 	/**
@@ -288,7 +280,7 @@ methodmap CEconItemView
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
-	//public native int GetStatTrakKill(); - removed Valve 8/17/2017
+	public native int GetStatTrakKill();
 };
 
 methodmap AddrInfo
@@ -450,7 +442,7 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
 	
-	/** ServerConsolePrint
+	/** ServerConsolePrint (Messages that are in another thread are ignored)
 	 *
 	 *	Called before displaying a message in the server console (Be careful with the messages).
 	 *	-
@@ -461,6 +453,15 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sMessage, LoggingSeverity severity);
 };
+
+/**
+ *	PTaH Version.
+ * @param sBuffer				The string will be written version (only need to specify if you want to get the version as a string).
+ * @param len					Length of the line.
+ *	-
+ * @return	Return PTaH Version (or example 108, sBuffer = "1.0.8").
+*/
+native int PTaH_Version(char[] sBuf = NULL_STRING, int iLen = 0);
 
 /**
  *	Enables Hook.
@@ -523,16 +524,6 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
 
 /**
- *	Spawn item by DefinitionIndex (CEconItemView valid, so the weapon does not have bugs).
- * @param DefIndex				DefinitionIndex items.
- * @param origin				origin, или NULL_VECTOR.
- * @param angles				angles, или NULL_VECTOR.
- *	-
- * @return	Returns index items.
-*/
-native int PTaH_SpawnItemFromDefIndex(int DefIndex, const float origin[3] = NULL_VECTOR, const float angles[3] = NULL_VECTOR);
-
-/**
  *	gets md5 hash file.
  * @param sFile					The path to the file.
  * @param sBuffer				The string will be recorded hash.
@@ -583,6 +574,7 @@ public Extension __ext_PTaH =
 #if !defined REQUIRE_EXTENSIONS
 public __ext_PTaH_SetNTVOptional()
 {
+	MarkNativeAsOptional("PTaH_Version");
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
@@ -590,7 +582,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
 	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
-	MarkNativeAsOptional("CEconItemDefinition.GetCCSWeaponData");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
@@ -608,7 +599,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
-	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
 	MarkNativeAsOptional("PTaH_MD5File");
 	MarkNativeAsOptional("PTaH_GetAddrInfo");
 	MarkNativeAsOptional("PTaH_Gai_StrError");

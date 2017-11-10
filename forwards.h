@@ -34,6 +34,7 @@
 
 #include "extension.h"
 #include "netmessages.pb.h"
+#include <amtl/am-thread-utils.h> 
 
 template <int Type, class NetMessage, int Group, bool reliable>
 class CNetMessagePB : public INetMessage, public NetMessage {
@@ -88,6 +89,8 @@ public:
 	IChangeableForward *m_pMapContentList;
 	CDetour *m_pLoggingSeverity;
 	IChangeableForward *m_pServerConsolePrint;
+	
+	ke::ThreadId Thread_Id;
 };
 
 extern CForwardManager g_pPTaHForwards;

@@ -45,6 +45,11 @@
 #include <netdb.h> 
 #endif
 
+static cell_t PTaH_Version(IPluginContext *pContext, const cell_t *params)
+{
+	if(params[2] != 0) pContext->StringToLocal(params[1], params[2], SMEXT_CONF_VERSION);
+	return PTaH_VERSION;
+}
 
 static cell_t PTaH_(IPluginContext *pContext, const cell_t *params)
 {
@@ -121,12 +126,6 @@ static cell_t PTaH_GetClassName(IPluginContext *pContext, const cell_t *params)
 		pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
 		return numBytes;
 	}
-	return pContext->ThrowNativeError("CEconItemDefinition invalid");
-}
-
-static cell_t PTaH_GetCCSWeaponData(IPluginContext *pContext, const cell_t *params)
-{
-	if(params[1]) return (cell_t)((CEconItemDefinition *)params[1])->GetCCSWeaponData();
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
@@ -336,9 +335,9 @@ static cell_t PTaH_GetOrigin(IPluginContext *pContext, const cell_t *params)
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetKillEaterValueByType(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetKillEater(IPluginContext *pContext, const cell_t *params)
 {
-	if(params[1]) return pContext->ThrowNativeError("GetStatTrakKill removed Valve 8/17/2017");//((CEconItemView *)params[1])->GetKillEaterValueByType(0/*0 returns StatTrakKill, the rest is not clear*/);
+	if(params[1]) return  ((CEconItemView *)params[1])->GetKillEaterValue();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
@@ -417,100 +416,6 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 	CBaseEntity *pEntityW = nullptr;
 	pCallWrapper->Execute(vstk, &pEntityW);
 	return gamehelpers->EntityToBCompatRef(pEntityW);
-}
-
-static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext *pContext, const cell_t *params)
-{
-	static ICallWrapper *pCallWrapper = nullptr;
-	if (!pCallWrapper)
-	{
-		void *addr = nullptr;
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", &addr) || !addr)
-		{
-			smutils->LogError(myself, "Failed to get SpawnItem function.");
-			return -1;
-		}
-		
-		PassInfo pass[6];
-		PassInfo ret;
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(uint16_t);
-		pass[1].flags = PASSFLAG_BYVAL;
-		pass[1].type  = PassType_Basic;
-		pass[1].size  = sizeof(Vector*);
-		pass[2].flags = PASSFLAG_BYVAL;
-		pass[2].type  = PassType_Basic;
-		pass[2].size  = sizeof(QAngle*);
-		pass[3].flags = PASSFLAG_BYVAL;
-		pass[3].type  = PassType_Basic;
-		pass[3].size  = sizeof(int);
-		pass[4].flags = PASSFLAG_BYVAL;
-		pass[4].type  = PassType_Basic;
-		pass[4].size  = sizeof(int);
-		pass[5].flags = PASSFLAG_BYVAL;
-		pass[5].type  = PassType_Basic;
-		pass[5].size  = sizeof(char const*);
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(CBaseEntity *);
-		
-		#ifdef WIN32
-		pCallWrapper = bintools->CreateCall(addr, CallConv_Cdecl, &ret, pass, 6);
-		#else
-		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, pass, 6);
-		#endif
-	}
-	
-	#ifdef WIN32
-	unsigned char vstk[sizeof(uint16_t) + sizeof(Vector*) + sizeof(QAngle*) + sizeof(int) * 2 * sizeof(const char *)];
-	#else
-	unsigned char vstk[sizeof(void *) + sizeof(uint16_t) + sizeof(Vector*) + sizeof(QAngle*) + sizeof(int) * 2 * sizeof(const char *)];
-	#endif
-	unsigned char *vptr = vstk;
-	
-	cell_t* source_vector;
-	pContext->LocalToPhysAddr(params[2], &source_vector);
-
-	cell_t* source_qangle;
-	pContext->LocalToPhysAddr(params[3], &source_qangle);
-
-	Vector vector;
-	QAngle qangle;
-
-	if(source_vector != pContext->GetNullRef(SP_NULL_VECTOR))
-	{
-		vector[0] = sp_ctof(source_vector[0]);
-		vector[1] = sp_ctof(source_vector[1]);
-		vector[2] = sp_ctof(source_vector[2]);
-	}
-	if(source_qangle != pContext->GetNullRef(SP_NULL_VECTOR))
-	{
-		qangle[0] = sp_ctof(source_qangle[0]);
-		qangle[1] = sp_ctof(source_qangle[1]);
-		qangle[2] = sp_ctof(source_qangle[2]);
-	}
-	
-	#ifdef POSIX
-	*(void **)vptr = nullptr;// ItemGeneration (By the code it is not used anywhere, so we will do without it :) )
-	vptr += sizeof(void *);
-	#endif
-	*(uint16_t*)vptr = params[1];
-	vptr += sizeof(uint16_t);
-	*(Vector**)vptr = &vector;
-	vptr += sizeof(Vector*);
-	*(QAngle**)vptr = &qangle;
-	vptr += sizeof(QAngle*);
-	*(int*)vptr = 1;
-	vptr += sizeof(int);
-	*(int*)vptr = 4;
-	vptr += sizeof(int);
-	*(const char **)vptr = nullptr;
-
-	CBaseEntity *pEntity = nullptr;
-	pCallWrapper->Execute(vstk, &pEntity);
-	return gamehelpers->EntityToBCompatRef(pEntity);
 }
 
 static cell_t PTaH_MD5File(IPluginContext *pContext, const cell_t *params)
@@ -629,6 +534,7 @@ cell_t PTaH_AddrInfoClearMem(IPluginContext *pContext, const cell_t *params)
 
 extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
+	{ "PTaH_Version",										PTaH_Version },
 	{ "PTaH",												PTaH_ },
 	{ "PTaH_GetItemDefinitionByName",						PTaH_GetItemDefinitionByName },
 	{ "PTaH_GetItemDefinitionByDefIndex",					PTaH_GetItemDefinitionByDefIndex },
@@ -636,7 +542,6 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },
 	{ "CEconItemDefinition.GetClassName",					PTaH_GetClassName },
-	{ "CEconItemDefinition.GetCCSWeaponData",				PTaH_GetCCSWeaponData },
 	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadout },
 	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromWeapon },
 	{ "CEconItemView.GetCustomPaintKitIndex",				PTaH_GetCustomPaintKitIndex },
@@ -652,9 +557,8 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetFlags",								PTaH_GetFlags },
 	{ "CEconItemView.GetOrigin",							PTaH_GetOrigin },
 	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
-	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEaterValueByType },
+	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEater },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
-	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
 	{ "PTaH_MD5File",										PTaH_MD5File },
 	{ "PTaH_GetAddrInfo",									PTaH_GetAddrInfo },
 	{ "PTaH_Gai_StrError",									PTaH_Gai_StrError },

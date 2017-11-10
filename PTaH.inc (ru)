@@ -112,15 +112,6 @@ methodmap CEconItemDefinition
 	 * @error CEconItemDefinition == NULL.
 	*/
 	public native int GetClassName(char[] sBuf, int iLen);
-	
-	/**
-	 *	Получает CCSWeaponData.
-	 *	-
-	 * @return	Возвращает CCSWeaponData.
-	 *	-
-	 * @error CEconItemDefinition == NULL.
-	*/
-	public native Address GetCCSWeaponData();
 };
 
 methodmap CEconItemView
@@ -231,7 +222,8 @@ methodmap CEconItemView
 	*/
 	public bool IsCustomItemView() 
     { 
-		return this.GetAccountID() != 0 ? true:false;
+		int iBuf = this.GetAccountID();
+		return iBuf != 0 && iBuf != 1;
     }
 	
 	/**
@@ -288,13 +280,13 @@ methodmap CEconItemView
 	 *	-
 	 * @error CEconItemView == NULL.
 	*/
-	//public native int GetStatTrakKill(); - удалено Valve 17.8.2017
+	public native int GetStatTrakKill();
 };
 
 methodmap AddrInfo
 {
-	//!!!!!!!!!!!!!!!!!!!!! AddrInfo is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded AddrInfo - NULL ( if(AddrInfo) ) !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! AddrInfo не является Handle, CloseHandle() - НЕ НУЖЕН !!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!!!!!!!!!! Всегда проверяйте, не равен ли AddrInfo - NULL ( if(AddrInfo) ) !!!!!!!!!!!!!!!!!!!!!
 	
 	/**
 	 *	Получает версию IP адреса (AF_INET или AF_INET6).
@@ -449,7 +441,7 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
 	
-	/** ServerConsolePrint
+	/** ServerConsolePrint (Сообщения, которые находятся в другом потоке, игнорируются)
 	 *
 	 *	Вызывается перед выводом сообщение в консоль сервера (Будьте аккуратны при роботе с сообщениями).
 	 *	-
@@ -460,6 +452,15 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sMessage, LoggingSeverity severity);
 };
+
+/**
+ *	Версия PTaH.
+ * @param sBuffer				Строка куда будет записана версия (указывать не обязательно, только если нужно получить версию в виде строки).
+ * @param len					Длина строки.
+ *	-
+ * @return	Возвращает версию PTaH (например 108, sBuffer = "1.0.8").
+*/
+native int PTaH_Version(char[] sBuf = NULL_STRING, int iLen = 0);
 
 /**
  *	Активирует хук.
@@ -522,16 +523,6 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
 
 /**
- *	Спавнит предмет по DefinitionIndex (CEconItemView валидный, так что оружие не имеет багов).
- * @param DefIndex				DefinitionIndex предмета.
- * @param origin				origin, или NULL_VECTOR.
- * @param angles				angles, или NULL_VECTOR.
- *	-
- * @return	Возвращает индекс предмета.
-*/
-native int PTaH_SpawnItemFromDefIndex(int DefIndex, const float origin[3] = NULL_VECTOR, const float angles[3] = NULL_VECTOR);
-
-/**
  *	Получает md5 hash файла.
  * @param sFile					Путь к файлу.
  * @param sBuffer				Строка куда будет записан hash.
@@ -582,6 +573,7 @@ public Extension __ext_PTaH =
 #if !defined REQUIRE_EXTENSIONS
 public __ext_PTaH_SetNTVOptional()
 {
+	MarkNativeAsOptional("PTaH_Version");
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
@@ -589,7 +581,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
 	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
-	MarkNativeAsOptional("CEconItemDefinition.GetCCSWeaponData");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
@@ -607,7 +598,6 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
-	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
 	MarkNativeAsOptional("PTaH_MD5File");
 	MarkNativeAsOptional("PTaH_GetAddrInfo");
 	MarkNativeAsOptional("PTaH_Gai_StrError");
