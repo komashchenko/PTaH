@@ -356,7 +356,7 @@ void CForwardManager::UnhookClient(int client)
 	}
 }
 
-CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy)
+CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0)
 {
 	if(m_pGiveNamedItem->GetFunctionCount() > 0)
 	{
@@ -371,7 +371,7 @@ CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CE
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
 }
 
-CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy)
+CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0)
 {
 	if(m_pGiveNamedItemPre->GetFunctionCount() > 0)
 	{
