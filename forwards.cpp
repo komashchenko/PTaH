@@ -37,9 +37,9 @@
 CForwardManager g_pPTaHForwards;
 
 //GiveNamedItem
-SH_DECL_MANUALHOOK4(GiveNamedItemHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool);
+SH_DECL_MANUALHOOK5(GiveNamedItemHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, void *);
 //GiveNamedItemPre
-SH_DECL_MANUALHOOK4(GiveNamedItemPreHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool);
+SH_DECL_MANUALHOOK5(GiveNamedItemPreHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, void *);
 //WeaponCanUse
 SH_DECL_MANUALHOOK1(WeaponCanUseHook, 0, 0, 0, bool, CBaseCombatWeapon *);
 //SetModel
@@ -356,7 +356,7 @@ void CForwardManager::UnhookClient(int client)
 	}
 }
 
-CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried)
+CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy)
 {
 	if(m_pGiveNamedItem->GetFunctionCount() > 0)
 	{
@@ -371,7 +371,7 @@ CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CE
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
 }
 
-CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried)
+CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy)
 {
 	if(m_pGiveNamedItemPre->GetFunctionCount() > 0)
 	{
@@ -395,7 +395,7 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 					g_pPTaHForwards.IgnoredCEconItemView = true;
 					pViewNew = 0;
 				}
-				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried));
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried, NULL));
 			}
 			else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
 		}
