@@ -54,9 +54,9 @@ public:
 	void Shutdown();
 	
 	//GiveNamedItem
-	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried);
+	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy);
 	//GiveNamedItemPre
-	CBaseEntity *GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried);
+	CBaseEntity *GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void * dummy);
 	//WeaponCanUse
 	bool WeaponCanUse(CBaseCombatWeapon *pWeapon);
 	//SetModel

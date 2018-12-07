@@ -378,7 +378,7 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 			return -1;
 		}
 		
-		PassInfo pass[4];
+		PassInfo pass[5];
 		PassInfo ret;
 		pass[0].flags = PASSFLAG_BYVAL;
 		pass[0].type  = PassType_Basic;
@@ -392,15 +392,18 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 		pass[3].flags = PASSFLAG_BYVAL;
 		pass[3].type  = PassType_Basic;
 		pass[3].size  = sizeof(bool);
+		pass[4].flags = PASSFLAG_BYVAL;
+		pass[4].type  = PassType_Basic;
+		pass[4].size  = sizeof(void *);
 
 		ret.flags = PASSFLAG_BYREF;
 		ret.type = PassType_Basic;
 		ret.size = sizeof(CBaseEntity *);
 		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 4);
+		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 5);
 	}
 	
-	unsigned char vstk[sizeof(void *) * 2 + sizeof(const char *) + sizeof(bool) + sizeof(int)];
+	unsigned char vstk[sizeof(void *) * 3 + sizeof(const char *) + sizeof(bool) + sizeof(int)];
 	unsigned char *vptr = vstk;
 
 	*(void **)vptr = pEntity;
@@ -412,6 +415,8 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 	*(int *)vptr = 0;
 	vptr += sizeof(int);
 	*(bool *)vptr = false;
+	vptr += sizeof(bool);
+	*(void **)vptr = NULL;
 
 	CBaseEntity *pEntityW = nullptr;
 	pCallWrapper->Execute(vstk, &pEntityW);
