@@ -37,9 +37,9 @@
 CForwardManager g_pPTaHForwards;
 
 //GiveNamedItem
-SH_DECL_MANUALHOOK5(GiveNamedItemHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, void *);
+SH_DECL_MANUALHOOK5(GiveNamedItemHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, Vector *);
 //GiveNamedItemPre
-SH_DECL_MANUALHOOK5(GiveNamedItemPreHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, void *);
+SH_DECL_MANUALHOOK5(GiveNamedItemPreHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, Vector *);
 //WeaponCanUse
 SH_DECL_MANUALHOOK1(WeaponCanUseHook, 0, 0, 0, bool, CBaseCombatWeapon *);
 //SetModel
@@ -281,8 +281,8 @@ bool CForwardManager::Init()
 	SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
 
 	
-	m_pGiveNamedItem = forwards->CreateForwardEx(NULL, ET_Ignore, 4, NULL, Param_Cell, Param_String, Param_Cell, Param_Cell);
-	m_pGiveNamedItemPre = forwards->CreateForwardEx(NULL, ET_Hook, 4, NULL, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef);
+	m_pGiveNamedItem = forwards->CreateForwardEx(NULL, ET_Ignore, 6, NULL, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Array);
+	m_pGiveNamedItemPre = forwards->CreateForwardEx(NULL, ET_Hook, 6, NULL, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
 	m_pWeaponCanUse = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_Cell, Param_Cell);
 	m_pSetModel = forwards->CreateForwardEx(NULL, ET_Ignore, 2, NULL, Param_Cell, Param_String);
 	m_pSetModelPre = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_String, Param_String);
@@ -356,22 +356,32 @@ void CForwardManager::UnhookClient(int client)
 	}
 }
 
-CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0)
+CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin)
 {
 	if(m_pGiveNamedItem->GetFunctionCount() > 0)
 	{
 		CBaseEntity *pEnt = META_IFACEPTR(CBaseEntity);
 		
+		cell_t Origin[3] = {0, 0, 0};
+		if(pOrigin)
+		{
+			Origin[0] = sp_ftoc(pOrigin->x);
+			Origin[1] = sp_ftoc(pOrigin->y);
+			Origin[2] = sp_ftoc(pOrigin->z);
+		}
+		
 		m_pGiveNamedItem->PushCell(gamehelpers->EntityToBCompatRef(pEnt));
 		m_pGiveNamedItem->PushString(szItem);
 		m_pGiveNamedItem->PushCell((cell_t)pView);
 		m_pGiveNamedItem->PushCell(gamehelpers->EntityToBCompatRef(META_RESULT_ORIG_RET(CBaseEntity *)));
+		m_pGiveNamedItem->PushCell(pOrigin == NULL);
+		m_pGiveNamedItem->PushArray(Origin, 3);
 		m_pGiveNamedItem->Execute(nullptr);
 	}
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
 }
 
-CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0)
+CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin)
 {
 	if(m_pGiveNamedItemPre->GetFunctionCount() > 0)
 	{
@@ -379,13 +389,24 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 		V_strncpy(szItemByf, szItem, sizeof(szItemByf));
 		cell_t pViewNew = ((cell_t)pView);
 		cell_t IgnoredCEconItemViewNew = false;
+		cell_t OriginIsNULL = pOrigin == NULL;
+		cell_t Origin[3] = {0, 0, 0};
+		if(pOrigin)
+		{
+			Origin[0] = sp_ftoc(pOrigin->x);
+			Origin[1] = sp_ftoc(pOrigin->y);
+			Origin[2] = sp_ftoc(pOrigin->z);
+		}
 		cell_t res = PLUGIN_CONTINUE;
+		
 		m_pGiveNamedItemPre->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
 		m_pGiveNamedItemPre->PushStringEx(szItemByf, sizeof(szItemByf), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pGiveNamedItemPre->PushCellByRef(&pViewNew);
 		m_pGiveNamedItemPre->PushCellByRef(&IgnoredCEconItemViewNew);
+		m_pGiveNamedItemPre->PushCellByRef(&OriginIsNULL);
+		m_pGiveNamedItemPre->PushArray(Origin, 3, SM_PARAM_COPYBACK);
 		m_pGiveNamedItemPre->Execute(&res);
-
+		
 		if(res != Pl_Continue)
 		{
 			if(res == Pl_Changed)
@@ -395,7 +416,16 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 					g_pPTaHForwards.IgnoredCEconItemView = true;
 					pViewNew = 0;
 				}
-				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried, NULL));
+				
+				Vector OriginNew; OriginNew.Invalidate();
+				if(OriginIsNULL == false)
+				{
+					OriginNew.x = sp_ctof(Origin[0]);
+					OriginNew.y = sp_ctof(Origin[1]);
+					OriginNew.z = sp_ctof(Origin[2]);
+				}
+				
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried, OriginNew.IsValid() ? &OriginNew : NULL));
 			}
 			else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
 		}

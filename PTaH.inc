@@ -342,10 +342,12 @@ typeset PTaHCB
 	 * @param sClassname		Classname item.
 	 * @param Item				Customization item.
 	 * @param iEnt				Index Entities item.
+	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
+	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR, use OriginIsNULL param for it).
 	 *	-
 	 * @noreturn
 	*/
-	function void (int iClient, const char[] sClassname, const CEconItemView Item, int iEnt);
+	function void (int iClient, const char[] sClassname, const CEconItemView Item, int iEnt, bool OriginIsNULL, const float Origin[3]);
 	
 	/** GiveNamedItemPre
 	 *
@@ -355,10 +357,12 @@ typeset PTaHCB
 	 * @param sClassname		Classname weapons.
 	 * @param Item				Customization item.
 	 * @param IgnoredCEconItemView	If true ignores CEconItemView the item.
+	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
+	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR or set Origin = NULL_VECTOR, use OriginIsNULL param for it).
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Returns Plugin_Changed allow issuance item with changes.
 	*/
-	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView);
+	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView, bool &OriginIsNULL, float Origin[3]);
 	
 	/** WeaponCanUse
 	 *
@@ -516,12 +520,13 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
  * @param iClient				Index Player.
  * @param sClassname			Classname item.
  * @param Item					Customization item.
+ * @param Origin				Coordinates the item will be created at, or NULL_VECTOR.
  *	-
  * @return	Return index item.
  *	-
  * @error invalid iClient.
 */
-native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
+native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = view_as<CEconItemView>(0), const float Origin[3] = NULL_VECTOR);
 
 /**
  *	gets md5 hash file.

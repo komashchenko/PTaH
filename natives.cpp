@@ -365,7 +365,20 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
 	char *strSource; pContext->LocalToString(params[2], &strSource);
-	cell_t pViewB = params[3];
+	
+	Vector Origin; Origin.Invalidate();
+	if(params[0] > 3)
+	{
+		cell_t* source_origin;
+		pContext->LocalToPhysAddr(params[4], &source_origin);
+		
+		if(source_origin != pContext->GetNullRef(SP_NULL_VECTOR))
+		{
+			Origin.x = sp_ctof(source_origin[0]);
+			Origin.y = sp_ctof(source_origin[1]);
+			Origin.z = sp_ctof(source_origin[2]);
+		}
+	}
 	
 	static ICallWrapper *pCallWrapper = nullptr;
 	if(!pCallWrapper)
@@ -394,7 +407,7 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 		pass[3].size  = sizeof(bool);
 		pass[4].flags = PASSFLAG_BYVAL;
 		pass[4].type  = PassType_Basic;
-		pass[4].size  = sizeof(void *);
+		pass[4].size  = sizeof(Vector *);
 
 		ret.flags = PASSFLAG_BYREF;
 		ret.type = PassType_Basic;
@@ -403,7 +416,7 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 5);
 	}
 	
-	unsigned char vstk[sizeof(void *) * 3 + sizeof(const char *) + sizeof(bool) + sizeof(int)];
+	unsigned char vstk[sizeof(void *) * 2 + sizeof(const char *) + sizeof(bool) + sizeof(int) + sizeof(Vector *)];
 	unsigned char *vptr = vstk;
 
 	*(void **)vptr = pEntity;
@@ -416,7 +429,7 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 	vptr += sizeof(int);
 	*(bool *)vptr = false;
 	vptr += sizeof(bool);
-	*(void **)vptr = NULL;
+	*(Vector **)vptr = Origin.IsValid() ? &Origin : NULL;
 
 	CBaseEntity *pEntityW = nullptr;
 	pCallWrapper->Execute(vstk, &pEntityW);
