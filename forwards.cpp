@@ -114,12 +114,12 @@ DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, chan
 	return DETOUR_MEMBER_CALL(LoggingSeverity)(channelID, severity, color, pMessage);
 }
 
-DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, void *, const char *, szItem, int, iTeam, bool, bUnknown, void *, vUnknown)
+DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, uint64_t, const char *, szItem, int, iTeam, bool, bUnknown, void *, vUnknown)
 {
 	if(g_pPTaHForwards.IgnoredCEconItemView)
 	{
 		g_pPTaHForwards.IgnoredCEconItemView = false;
-		return nullptr;
+		return 0;
 	}
 	return DETOUR_MEMBER_CALL(FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bUnknown, vUnknown);
 }
