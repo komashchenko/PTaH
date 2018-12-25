@@ -446,16 +446,17 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
 	
-	/** ServerConsolePrint (Messages that are in another thread are ignored)
+	/** ServerConsolePrint
 	 *
 	 *	Called before displaying a message in the server console (Be careful with the messages).
 	 *	-
 	 * @param sMessage				The message is printed to the server console.
 	 * @param severity				Logging severity message.
+	 * @param bBlockable			False if message was cached from another thread (Plugin_Stop and Plugin_Handled are ignored).
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict the display messages. Return Plugin_Continue allow display messages without changes.
 	*/
-	function Action (const char[] sMessage, LoggingSeverity severity);
+	function Action (const char[] sMessage, LoggingSeverity severity, bool bBlockable);
 };
 
 /**

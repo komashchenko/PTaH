@@ -33,8 +33,16 @@
 #include "forwards.h"
 #include "classes.h"
 #include "tier0/dbg.h"
+#include <queue>
+#include <string>
 
 CForwardManager g_pPTaHForwards;
+struct SCPCache
+{
+	std::string sMessage;
+	LoggingSeverity_t severity;
+};
+std::queue<SCPCache> SCPCacheQueue;
 
 //GiveNamedItem
 SH_DECL_MANUALHOOK5(GiveNamedItemHook, 0, 0, 0, CBaseEntity *, const char *, int, CEconItemView *, bool, Vector *);
@@ -52,6 +60,8 @@ SH_DECL_HOOK2_void(IVEngineServer, ClientPrintf, SH_NOATTRIB, 0, edict_t *, cons
 SH_DECL_MANUALHOOK13(ConnectClient, 0, 0, 0, IClient *, const netadr_t &, int, int, int, const char *, const char *, const char *, int, CUtlVector<NetMsg_SplitPlayerConnect *> &, bool, CrossPlayPlatform_t, const unsigned char *, int);
 //RejectConnection
 SH_DECL_MANUALHOOK1_void_vafmt(RejectConnection, 0, 0, 0, const netadr_t &);
+//OnGameFrame
+SH_DECL_HOOK1_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool);
 
 DETOUR_DECL_MEMBER1(CDownloadListGenerator, void, const char *, file_name)
 {
@@ -101,17 +111,41 @@ DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 
 DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, channelID, LoggingSeverity_t, severity, Color, color, const tchar *, pMessage)
 {
-	//Thread_Id == ke::GetCurrentThreadId() - Temporary solution to avoid crashes
-	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0 && g_pPTaHForwards.Thread_Id == ke::GetCurrentThreadId())
+	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0)
 	{
-		cell_t res = PLUGIN_CONTINUE;
-		g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
-		g_pPTaHForwards.m_pServerConsolePrint->PushCell(severity);
-		g_pPTaHForwards.m_pServerConsolePrint->Execute(&res);
-		
-		if(res != Pl_Continue) return LR_CONTINUE;
+		if(g_pPTaHForwards.Thread_Id == ke::GetCurrentThreadId())
+		{
+			cell_t res = PLUGIN_CONTINUE;
+			g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
+			g_pPTaHForwards.m_pServerConsolePrint->PushCell(severity);
+			g_pPTaHForwards.m_pServerConsolePrint->PushCell(true);
+			g_pPTaHForwards.m_pServerConsolePrint->Execute(&res);
+			
+			if(res != Pl_Continue) return LR_CONTINUE;
+		}
+		else
+		{
+			//Messages not from main thread we cache
+			SCPCacheQueue.push({pMessage, severity});
+		}
 	}
 	return DETOUR_MEMBER_CALL(LoggingSeverity)(channelID, severity, color, pMessage);
+}
+
+void CForwardManager::OnGameFrame(bool simulating)
+{
+	//We send all messages from cache
+	while(!SCPCacheQueue.empty())
+	{
+		SCPCache &Cache = SCPCacheQueue.front();
+		
+		m_pServerConsolePrint->PushString(Cache.sMessage.c_str());
+		m_pServerConsolePrint->PushCell(Cache.severity);
+		m_pServerConsolePrint->PushCell(false);
+		m_pServerConsolePrint->Execute(nullptr);
+		
+		SCPCacheQueue.pop();
+	}
 }
 
 DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, uint64_t, const char *, szItem, int, iTeam, bool, bUnknown, void *, vUnknown)
@@ -275,10 +309,9 @@ bool CForwardManager::Init()
 	else m_pLoggingSeverity->EnableDetour();
 	
 	
-	
-	
 	SH_ADD_HOOK(IVEngineServer, ClientPrintf, engine, SH_MEMBER(this, &CForwardManager::ClientPrint), false);
 	SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
+	SH_ADD_HOOK(IServerGameDLL, GameFrame, gamedll, SH_MEMBER(this, &CForwardManager::OnGameFrame), false);
 
 	
 	m_pGiveNamedItem = forwards->CreateForwardEx(NULL, ET_Ignore, 6, NULL, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Array);
@@ -290,7 +323,7 @@ bool CForwardManager::Init()
 	m_pMapContentList = forwards->CreateForwardEx(NULL, ET_Hook, 1, NULL, Param_String);
 	m_pOnClientConnect = forwards->CreateForwardEx(NULL, ET_Hook, 5, NULL, Param_String, Param_String, Param_String, Param_String, Param_String);
 	m_pExecuteStringCommand = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_Cell, Param_String);
-	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_String, Param_Cell);
+	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_String, Param_Cell, Param_Cell);
 	
 	return true;
 }
@@ -301,6 +334,10 @@ void CForwardManager::Shutdown()
 	if(m_pCDownloadListGenerator) m_pCDownloadListGenerator->Destroy();
 	if(m_pDExecuteStringCommand) m_pDExecuteStringCommand->Destroy();
 	if(m_pFindMatchingWeaponsForTeamLoadout) m_pFindMatchingWeaponsForTeamLoadout->Destroy();
+	
+	SH_REMOVE_HOOK(IVEngineServer, ClientPrintf, engine, SH_MEMBER(this, &CForwardManager::ClientPrint), false);
+	SH_REMOVE_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
+	SH_REMOVE_HOOK(IServerGameDLL, GameFrame, gamedll, SH_MEMBER(this, &CForwardManager::OnGameFrame), false);
 	
 	forwards->ReleaseForward(m_pGiveNamedItem);
 	forwards->ReleaseForward(m_pGiveNamedItemPre);
@@ -445,7 +482,7 @@ bool CForwardManager::WeaponCanUse(CBaseCombatWeapon *pWeapon)
 		m_pWeaponCanUse->Execute(&res);
 		if(ret != res)
 		{
-			RETURN_META_VALUE(MRES_SUPERCEDE, !!res);
+			RETURN_META_VALUE(MRES_SUPERCEDE, (bool)res);
 		}
 	}
 	RETURN_META_VALUE(MRES_IGNORED, true);

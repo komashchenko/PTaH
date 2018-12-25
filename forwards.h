@@ -71,6 +71,8 @@ public:
 	
 	void HookClient(int client);
 	void UnhookClient(int client);
+	
+	void OnGameFrame(bool simulating);
 
 	int m_iHookId[5][MAXPLAYERS+1];
 
