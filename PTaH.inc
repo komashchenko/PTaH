@@ -342,10 +342,12 @@ typeset PTaHCB
 	 * @param sClassname		Classname item.
 	 * @param Item				Customization item.
 	 * @param iEnt				Index Entities item.
+	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
+	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR, use OriginIsNULL param for it).
 	 *	-
 	 * @noreturn
 	*/
-	function void (int iClient, const char[] sClassname, const CEconItemView Item, int iEnt);
+	function void (int iClient, const char[] sClassname, const CEconItemView Item, int iEnt, bool OriginIsNULL, const float Origin[3]);
 	
 	/** GiveNamedItemPre
 	 *
@@ -355,10 +357,12 @@ typeset PTaHCB
 	 * @param sClassname		Classname weapons.
 	 * @param Item				Customization item.
 	 * @param IgnoredCEconItemView	If true ignores CEconItemView the item.
+	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
+	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR or set Origin = NULL_VECTOR, use OriginIsNULL param for it).
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Returns Plugin_Changed allow issuance item with changes.
 	*/
-	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView);
+	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView, bool &OriginIsNULL, float Origin[3]);
 	
 	/** WeaponCanUse
 	 *
@@ -442,16 +446,17 @@ typeset PTaHCB
 	*/
 	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
 	
-	/** ServerConsolePrint (Messages that are in another thread are ignored)
+	/** ServerConsolePrint
 	 *
 	 *	Called before displaying a message in the server console (Be careful with the messages).
 	 *	-
 	 * @param sMessage				The message is printed to the server console.
 	 * @param severity				Logging severity message.
+	 * @param bBlockable			False if message was cached from another thread (Plugin_Stop and Plugin_Handled are ignored).
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict the display messages. Return Plugin_Continue allow display messages without changes.
 	*/
-	function Action (const char[] sMessage, LoggingSeverity severity);
+	function Action (const char[] sMessage, LoggingSeverity severity, bool bBlockable);
 };
 
 /**
@@ -516,12 +521,13 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
  * @param iClient				Index Player.
  * @param sClassname			Classname item.
  * @param Item					Customization item.
+ * @param Origin				Coordinates the item will be created at, or NULL_VECTOR.
  *	-
  * @return	Return index item.
  *	-
  * @error invalid iClient.
 */
-native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item);
+native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = view_as<CEconItemView>(0), const float Origin[3] = NULL_VECTOR);
 
 /**
  *	gets md5 hash file.

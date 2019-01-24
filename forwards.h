@@ -54,9 +54,9 @@ public:
 	void Shutdown();
 	
 	//GiveNamedItem
-	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0);
+	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin);
 	//GiveNamedItemPre
-	CBaseEntity *GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, void *pUnk0);
+	CBaseEntity *GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin);
 	//WeaponCanUse
 	bool WeaponCanUse(CBaseCombatWeapon *pWeapon);
 	//SetModel
@@ -71,6 +71,8 @@ public:
 	
 	void HookClient(int client);
 	void UnhookClient(int client);
+	
+	void OnGameFrame(bool simulating);
 
 	int m_iHookId[5][MAXPLAYERS+1];
 
