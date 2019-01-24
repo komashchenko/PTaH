@@ -40,8 +40,8 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"PTaH (P Tools and Hooks)"
 #define SMEXT_CONF_DESCRIPTION	"Expanding sdkhooks and sdktools"
-#define SMEXT_CONF_VERSION		"1.0.9"
-#define PTaH_VERSION			109
+#define SMEXT_CONF_VERSION		"1.0.10"
+#define PTaH_VERSION			10010
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
 #define SMEXT_CONF_URL			"https://zizt.ru/ | http://hlmod.ru | https://forums.alliedmods.net/"
 #define SMEXT_CONF_LOGTAG		"PTaH"
