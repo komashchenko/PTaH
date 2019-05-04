@@ -45,17 +45,16 @@ public:
 	uint16_t GetDefinitionIndex();
 	int GetLoadoutSlot(int iTeam);
 	int GetNumSupportedStickerSlots();
-	char *GetClassName();
+	const char* GetClassName();
 };
 
 class CEconItemSchema
 {
-private:
-	void *pSchema = nullptr;
 public:
-	CEconItemSchema();
-	CEconItemDefinition *GetItemDefinitionByName(const char *classname);
-	CEconItemDefinition *GetItemDefinitionByDefIndex(uint16_t DefIndex);
+	static void* operator new(size_t);
+	static void operator delete(void*) { };
+	CEconItemDefinition* GetItemDefinitionByName(const char* classname);
+	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t DefIndex);
 	
 	CEconItemAttributeDefinition *GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
 };
@@ -80,16 +79,16 @@ public:
 	int GetStickerAttributeBySlotIndexInt(int slot, EStickerAttributeType StickerAttribut, int def);
 	bool IsTradable();
 	bool IsMarketable();
-	CEconItemDefinition *GetItemDefinition();
+	CEconItemDefinition* GetItemDefinition();
 	int GetAccountID();
 	int GetQuality();
 	int GetRarity();
 	int GetFlags();
 	int GetOrigin();
-	char *GetCustomName();
+	const char* GetCustomName();
 	int GetKillEaterValue();
 	
-	void IterateAttributes(IEconItemAttributeIterator *AttributeIterator);
+	void IterateAttributes(IEconItemAttributeIterator* AttributeIterator);
 };
 
 class IEconItemUntypedAttributeIterator : public IEconItemAttributeIterator
@@ -108,7 +107,7 @@ public:
 	CAttributeIterator_HasAttribute(CEconItemAttributeDefinition const*);
 	virtual bool OnIterateAttributeValueUntyped(CEconItemAttributeDefinition const*);
 
-	CEconItemAttributeDefinition const *m_pItemAttrDef;
+	CEconItemAttributeDefinition const* m_pItemAttrDef;
 	bool m_found;
 };
 
@@ -138,10 +137,10 @@ public:
 		return !m_found;
 	}
 
-	CEconItemAttributeDefinition const *m_pItemAttrDef;
-	B *m_value;
+	CEconItemAttributeDefinition const* m_pItemAttrDef;
+	B* m_value;
 	bool m_found;
 };
 
 
-extern CEconItemSchema *g_pCEconItemSchema;
+extern CEconItemSchema* g_pCEconItemSchema;

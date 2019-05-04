@@ -46,7 +46,6 @@ SMEXT_LINK(&g_PTaH);
 
 IGameConfig *g_pGameConf[4];
 
-IBinTools *bintools = nullptr;
 ISDKTools *sdktools = nullptr;
 IServer *iserver = nullptr;
 
@@ -88,7 +87,6 @@ bool PTaH::SDK_OnLoad(char *error, size_t maxlength, bool late)
 	
 	CDetourManager::Init(smutils->GetScriptingEngine(), g_pGameConf[GameConf_PTaH]);
 	
-	sharesys->AddDependency(myself, "bintools.ext", true, true);
 	sharesys->AddDependency(myself, "sdktools.ext", true, true);
 	
 	sharesys->AddNatives(myself, g_ExtensionNatives);
@@ -100,7 +98,6 @@ bool PTaH::SDK_OnLoad(char *error, size_t maxlength, bool late)
 
 void PTaH::SDK_OnAllLoaded()
 {
-	SM_GET_LATE_IFACE(BINTOOLS, bintools);
 	SM_GET_LATE_IFACE(SDKTOOLS, sdktools);
 	
 	iserver = sdktools->GetIServer();

@@ -45,13 +45,13 @@
 #include <netdb.h> 
 #endif
 
-static cell_t PTaH_Version(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_Version(IPluginContext* pContext, const cell_t* params)
 {
 	if(params[2] != 0) pContext->StringToLocal(params[1], params[2], SMEXT_CONF_VERSION);
 	return PTaH_VERSION;
 }
 
-static cell_t PTaH_(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_(IPluginContext* pContext, const cell_t* params)
 {
 	if(params[2] == 0)
 	{
@@ -88,55 +88,63 @@ static cell_t PTaH_(IPluginContext *pContext, const cell_t *params)
 	return false;
 }
 
-static cell_t PTaH_GetItemDefinitionByName(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetItemDefinitionByName(IPluginContext* pContext, const cell_t* params)
 {
-	char *strSource; pContext->LocalToString(params[1], &strSource);
-	return (cell_t)g_pCEconItemSchema->GetItemDefinitionByName((const char *)strSource);
+	if(g_pCEconItemSchema)
+	{
+		char* strSource; pContext->LocalToString(params[1], &strSource);
+		return (cell_t)g_pCEconItemSchema->GetItemDefinitionByName(strSource);
+	}
+	return pContext->ThrowNativeError("g_pCEconItemSchema == NULL");
 }
 
-static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const cell_t* params)
 {
-	return (cell_t)g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
+	if (g_pCEconItemSchema)
+	{
+		return (cell_t)g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
+	}
+	return pContext->ThrowNativeError("g_pCEconItemSchema == NULL");
 }
 
-static cell_t PTaH_GetDefinitionIndex(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemDefinition *)params[1])->GetDefinitionIndex();
+	if(params[1]) return ((CEconItemDefinition*)params[1])->GetDefinitionIndex();
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
-static cell_t PTaH_GetLoadoutSlot(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetLoadoutSlot(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemDefinition *)params[1])->GetLoadoutSlot(params[2]);
+	if(params[1]) return ((CEconItemDefinition*)params[1])->GetLoadoutSlot(params[2]);
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
-static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const cell_t *params)
 {
-	if(params[1]) return ((CEconItemDefinition *)params[1])->GetNumSupportedStickerSlots();
+	if(params[1]) return ((CEconItemDefinition*)params[1])->GetNumSupportedStickerSlots();
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
-static cell_t PTaH_GetClassName(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
 {
 	if(params[1])
 	{
 		size_t numBytes;
-		char *buf = ((CEconItemDefinition *)params[1])->GetClassName();
-		pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
+		const char* sBuf = ((CEconItemDefinition*)params[1])->GetClassName();
+		pContext->StringToLocalUTF8(params[2], params[3], (sBuf && sBuf[0]) ? sBuf : "", &numBytes);
 		return numBytes;
 	}
 	return pContext->ThrowNativeError("CEconItemDefinition invalid");
 }
 
-static cell_t PTaH_GetItemInLoadout(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
 {
 	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
-	CBaseEntity *pEntity;
-	if((pEntity = gamehelpers->ReferenceToEntity(params[1])) == NULL)
+	CBaseEntity* pEntity;
+	if((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
@@ -145,68 +153,40 @@ static cell_t PTaH_GetItemInLoadout(IPluginContext *pContext, const cell_t *para
 		return pContext->ThrowNativeError("Team index %d is invalid", params[2]);
 	}
 	
-	static ICallWrapper *pCallWrapper = nullptr;
-	static int iInventoryOffset = -1;
-	if(!pCallWrapper || iInventoryOffset == -1)
+	static int iGetItemInLoadoutOffset = -1, iInventoryOffset = -1;
+	if(iGetItemInLoadoutOffset == -1 || iInventoryOffset == -1)
 	{
-		int offset = -1, byteOffset;
-		void *addr = nullptr;
-		
-		if(!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &iGetItemInLoadoutOffset) || iGetItemInLoadoutOffset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetItemInLoadout offset");
+			smutils->LogError(myself, "Failed to get GetItemInLoadout offset.");
 			return 0;
 		}
-		
-		PassInfo pass[2];
-		PassInfo ret;
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(int);
-		pass[1].flags = PASSFLAG_BYVAL;
-		pass[1].type  = PassType_Basic;
-		pass[1].size  = sizeof(int);
 
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 2);
-		
-		
-		if(!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &byteOffset))
+		void* addr = nullptr;
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &iInventoryOffset) || iInventoryOffset == -1)
 		{
 			smutils->LogError(myself, "Failed to get CCSPlayerInventoryOffset offset");
 			return 0;
 		}
-		if(!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr) || !addr)
+		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr) || !addr)
 		{
 			smutils->LogError(myself, "Failed to get HandleCommand_Buy_Internal address");
 			return 0;
 		}
-		iInventoryOffset = *(int *)((intptr_t)addr + byteOffset);
+		iInventoryOffset = *(int*)((intptr_t)addr + iInventoryOffset);
 	}
 	
-	unsigned char vstk[sizeof(void *) + sizeof(int) * 2];
-	unsigned char *vptr = vstk;
-
-	*(void **)vptr = (void *)((intptr_t)pEntity + iInventoryOffset);
-	vptr += sizeof(void *);
-	*(int *)vptr = params[2];
-	vptr += sizeof(int);
-	*(int *)vptr = params[3];
-
-	CEconItemView *pView = nullptr;
-	pCallWrapper->Execute(vstk, &pView);
-	return (cell_t)pView;
+	void* CCSPlayerInventory = (void*)((intptr_t)pEntity + iInventoryOffset);
+	return (cell_t)((CEconItemView*(VCallingConvention*)(void*, int, int))(*(void***)CCSPlayerInventory)[iGetItemInLoadoutOffset])(CCSPlayerInventory, params[2], params[3]);
 }
 
 //https://github.com/alliedmodders/sourcemod/blob/0c8e6e29184bf58851954019a2060d84f0c556f9/extensions/sdkhooks/util.cpp#L37
-bool UTIL_ContainsDataTable(SendTable *pTable, const char *name)
+bool UTIL_ContainsDataTable(SendTable* pTable, const char* name)
 {
-	const char *pname = pTable->GetName();
+	const char* pname = pTable->GetName();
 	int props = pTable->GetNumProps();
-	SendProp *prop;
-	SendTable *table;
+	SendProp* prop;
+	SendTable* table;
 
 	if (pname && strcmp(name, pname) == 0)
 		return true;
@@ -234,15 +214,15 @@ bool UTIL_ContainsDataTable(SendTable *pTable, const char *name)
 }
 
 //Thank you GoD-Tony https://github.com/komashchenko/PTaH/pull/1
-static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cell_t* params)
 {
-	CBaseEntity *pEntity = gamehelpers->ReferenceToEntity(params[1]);
+	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
 	if(!pEntity)
 	{
 		return pContext->ThrowNativeError("Entity %d is invalid", params[1]);
 	}
 	
-	IServerNetworkable *pNet = ((IServerUnknown *)pEntity)->GetNetworkable();
+	IServerNetworkable* pNet = ((IServerUnknown*)pEntity)->GetNetworkable();
 	if (!pNet || !UTIL_ContainsDataTable(pNet->GetServerClass()->m_pTable, "DT_BaseCombatWeapon"))
 	{
 		return pContext->ThrowNativeError("Entity %d is not weapon", params[1]);
@@ -259,25 +239,25 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext *pContext, const cel
 	return (intptr_t)pEntity + offset;
 }
 
-static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetCustomPaintKitIndex();
+	if(params[1]) return ((CEconItemView*)params[1])->GetCustomPaintKitIndex();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetCustomPaintKitSeed();
+	if(params[1]) return ((CEconItemView*)params[1])->GetCustomPaintKitSeed();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetCustomPaintKitWear(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetCustomPaintKitWear(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return sp_ftoc(((CEconItemView *)params[1])->GetCustomPaintKitWear(sp_ctof(params[2])));
+	if(params[1]) return sp_ftoc(((CEconItemView*)params[1])->GetCustomPaintKitWear(sp_ctof(params[2])));
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext* pContext, const cell_t* params)
 {
 	if(params[1])
 	{
@@ -287,84 +267,84 @@ static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext *pContext, cons
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_IsTradable(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_IsTradable(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->IsTradable();
+	if(params[1]) return ((CEconItemView*)params[1])->IsTradable();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_IsMarketable(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_IsMarketable(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->IsMarketable();
+	if(params[1]) return ((CEconItemView*)params[1])->IsMarketable();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetItemDefinition(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetItemDefinition(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return (cell_t)((CEconItemView *)params[1])->GetItemDefinition();
+	if(params[1]) return (cell_t)((CEconItemView*)params[1])->GetItemDefinition();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetAccountID(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetAccountID();
+	if(params[1]) return ((CEconItemView*)params[1])->GetAccountID();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetQuality(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetQuality(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetQuality();
+	if(params[1]) return ((CEconItemView*)params[1])->GetQuality();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetRarity(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetRarity(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetRarity();
+	if(params[1]) return ((CEconItemView*)params[1])->GetRarity();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetFlags(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetFlags();
+	if(params[1]) return ((CEconItemView*)params[1])->GetFlags();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetOrigin(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return ((CEconItemView *)params[1])->GetOrigin();
+	if(params[1]) return ((CEconItemView*)params[1])->GetOrigin();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetKillEater(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
 {
-	if(params[1]) return  ((CEconItemView *)params[1])->GetKillEaterValue();
+	if(params[1]) return  ((CEconItemView*)params[1])->GetKillEaterValue();
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GetCustomName(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
 {
 	if(params[1])
 	{
 		size_t numBytes;
-		char *buf = ((CEconItemView *)params[1])->GetCustomName();
-		pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
+		const char* sBuf = ((CEconItemView*)params[1])->GetCustomName();
+		pContext->StringToLocalUTF8(params[2], params[3], (sBuf && sBuf[0]) ? sBuf : "", &numBytes);
 		return numBytes;
 	}
 	return pContext->ThrowNativeError("CEconItemView invalid");
 }
 
-static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params)
 {
 	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
-	CBaseEntity *pEntity;
-	if((pEntity = gamehelpers->ReferenceToEntity(params[1])) == NULL)
+	CBaseEntity* pEntity;
+	if((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
-	char *strSource; pContext->LocalToString(params[2], &strSource);
+	char* strSource; pContext->LocalToString(params[2], &strSource);
 	
 	Vector Origin; Origin.Invalidate();
 	if(params[0] > 3)
@@ -379,73 +359,30 @@ static cell_t PTaH_GivePlayerItem(IPluginContext *pContext, const cell_t *params
 			Origin.z = sp_ctof(source_origin[2]);
 		}
 	}
-	
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+
+	static int iGiveNamedItemOffset = -1;
+	if (iGiveNamedItemOffset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &iGiveNamedItemOffset) || iGiveNamedItemOffset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GiveNamedItem offset");
+			smutils->LogError(myself, "Failed to get GiveNamedItem offset.");
 			return -1;
 		}
-		
-		PassInfo pass[5];
-		PassInfo ret;
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(const char *);
-		pass[1].flags = PASSFLAG_BYVAL;
-		pass[1].type  = PassType_Basic;
-		pass[1].size  = sizeof(int);
-		pass[2].flags = PASSFLAG_BYVAL;
-		pass[2].type  = PassType_Basic;
-		pass[2].size  = sizeof(void *);
-		pass[3].flags = PASSFLAG_BYVAL;
-		pass[3].type  = PassType_Basic;
-		pass[3].size  = sizeof(bool);
-		pass[4].flags = PASSFLAG_BYVAL;
-		pass[4].type  = PassType_Basic;
-		pass[4].size  = sizeof(Vector *);
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(CBaseEntity *);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 5);
 	}
-	
-	unsigned char vstk[sizeof(void *) * 2 + sizeof(const char *) + sizeof(bool) + sizeof(int) + sizeof(Vector *)];
-	unsigned char *vptr = vstk;
 
-	*(void **)vptr = pEntity;
-	vptr += sizeof(void *);
-	*(const char **)vptr = strSource;
-	vptr += sizeof(const char *);
-	*(void **)vptr = (CEconItemView *)params[3];
-	vptr += sizeof(void *);
-	*(int *)vptr = 0;
-	vptr += sizeof(int);
-	*(bool *)vptr = false;
-	vptr += sizeof(bool);
-	*(Vector **)vptr = Origin.IsValid() ? &Origin : NULL;
-
-	CBaseEntity *pEntityW = nullptr;
-	pCallWrapper->Execute(vstk, &pEntityW);
-	return gamehelpers->EntityToBCompatRef(pEntityW);
+	return gamehelpers->EntityToBCompatRef(((CBaseEntity*(VCallingConvention*)(void*, const char*, int, CEconItemView*, bool, Vector*))(*(void***)pEntity)[iGiveNamedItemOffset])(pEntity, strSource, 0, (CEconItemView*)params[3], false, Origin.IsValid() ? &Origin : nullptr));
 }
 
-static cell_t PTaH_MD5File(IPluginContext *pContext, const cell_t *params)
+static cell_t PTaH_MD5File(IPluginContext* pContext, const cell_t* params)
 {
-	FILE *pFile;
+	FILE* pFile;
 	MD5Context_t context;
 	unsigned char digest[16], temp[1024];
 	unsigned int len, sum = 0;
 
-	char *filename;
+	char* filename;
 	pContext->LocalToString(params[1], &filename);
-	const char *path = g_pSM->GetGamePath();
+	const char* path = g_pSM->GetGamePath();
 
 	char filepath[1024];
 	g_pSM->Format(filepath, 1024, "%s/%s", path, filename);
@@ -468,16 +405,16 @@ static cell_t PTaH_MD5File(IPluginContext *pContext, const cell_t *params)
 	MD5Final(digest, &context);
 	fclose(pFile);
 
-	char *buffer;
+	char* buffer;
 	pContext->LocalToString(params[2], &buffer);
 
 	g_pSM->Format(buffer, params[3], "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]);
 	return 1;
 }
 
-cell_t PTaH_GetAddrInfo(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_GetAddrInfo(IPluginContext* pContext, const cell_t* params) 
 { 
-	char * pHostName;  pContext->LocalToString(params[1], &pHostName); 
+	char* pHostName;  pContext->LocalToString(params[1], &pHostName); 
 	
 	struct addrinfo hints, *res;
     int status;
@@ -490,41 +427,41 @@ cell_t PTaH_GetAddrInfo(IPluginContext *pContext, const cell_t *params)
 	
 	if((status = getaddrinfo(pHostName, NULL, &hints, &res)) == 0)
 	{
-		cell_t *info;
+		cell_t* info;
 		pContext->LocalToPhysAddr(params[3], &info);
 		*info = (cell_t)res;
 	}
 	return status;
 }
 
-cell_t PTaH_Gai_StrError(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_Gai_StrError(IPluginContext* pContext, const cell_t* params) 
 {
 	size_t numBytes;
-	char *buf = const_cast<char*>(gai_strerror(params[1]));
-	pContext->StringToLocalUTF8(params[2], params[3], (buf && buf[0]) ? buf : "", &numBytes);
+	char* sBuf = const_cast<char*>(gai_strerror(params[1]));
+	pContext->StringToLocalUTF8(params[2], params[3], (sBuf && sBuf[0]) ? sBuf : "", &numBytes);
 	return numBytes;
 }
 
-cell_t PTaH_AddrInfoFamily(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_AddrInfoFamily(IPluginContext* pContext, const cell_t* params) 
 { 
-	if(params[1]) return (cell_t)(((struct addrinfo *)params[1])->ai_family);
+	if(params[1]) return (cell_t)(((struct addrinfo*)params[1])->ai_family);
 	else return pContext->ThrowNativeError("AddrInfo invalid");
 }
 
-cell_t PTaH_AddrInfoHost(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_AddrInfoHost(IPluginContext* pContext, const cell_t* params) 
 {
 	if(params[1])
 	{
-		struct addrinfo *res = (struct addrinfo *)params[1];
+		struct addrinfo* res = (struct addrinfo*)params[1];
 		
-		char *addr_s;
+		char* addr_s;
 		
 		pContext->LocalToString(params[2], &addr_s);
 		
-		void *addr;
+		void* addr;
 		
-		if(res->ai_family == AF_INET) addr = &(((struct sockaddr_in *)res->ai_addr)->sin_addr);
-		else addr = &(((struct sockaddr_in6 *)res->ai_addr)->sin6_addr);
+		if(res->ai_family == AF_INET) addr = &(((struct sockaddr_in*)res->ai_addr)->sin_addr);
+		else addr = &(((struct sockaddr_in6*)res->ai_addr)->sin6_addr);
 		
 		inet_ntop(res->ai_family, addr, addr_s, params[3]);
 		
@@ -533,17 +470,17 @@ cell_t PTaH_AddrInfoHost(IPluginContext *pContext, const cell_t *params)
 	else return pContext->ThrowNativeError("AddrInfo invalid");
 }
 
-cell_t PTaH_AddrInfoNextIP(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_AddrInfoNextIP(IPluginContext* pContext, const cell_t* params) 
 { 
-	if(params[1]) return (cell_t)(((struct addrinfo *)params[1])->ai_next);
+	if(params[1]) return (cell_t)(((struct addrinfo*)params[1])->ai_next);
 	else return pContext->ThrowNativeError("AddrInfo invalid");
 }
 
-cell_t PTaH_AddrInfoClearMem(IPluginContext *pContext, const cell_t *params) 
+cell_t PTaH_AddrInfoClearMem(IPluginContext* pContext, const cell_t* params) 
 { 
 	if(params[1])
 	{
-		freeaddrinfo((struct addrinfo *)params[1]);
+		freeaddrinfo((struct addrinfo*)params[1]);
 		return 1;
 	}
 	else return pContext->ThrowNativeError("AddrInfo invalid");

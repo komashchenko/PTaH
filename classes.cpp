@@ -33,74 +33,44 @@
 #include "classes.h"
 
 
-CEconItemSchema::CEconItemSchema()
+void* CEconItemSchema::operator new(size_t)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
-	{
-		void *addr = nullptr;
-		if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", &addr) || !addr)
-		{
-			smutils->LogError(myself, "Failed to get GetItemSchema function.");
-		}
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
-		pCallWrapper = bintools->CreateCall(addr, CallConv_Cdecl, &ret, NULL, 0);
-	}
-	
-	pCallWrapper->Execute(NULL, &pSchema);
-	#ifdef WIN32
-	pSchema = (CEconItemSchema *)((intptr_t)pSchema + 4);
-	#endif
-}
+	CEconItemSchema* (*GetItemSchema)(void);
 
-CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName(const char *classname)
-{
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", (void**)&GetItemSchema) || !GetItemSchema)
 	{
-		int offset = -1;
-		
+		smutils->LogError(myself, "Failed to get GetItemSchema function.");
+		return nullptr;
+	}
+
+#ifdef WIN32
+	return GetItemSchema() + sizeof(void*);
+#else
+	return GetItemSchema();
+#endif
+};
+
+CEconItemDefinition* CEconItemSchema::GetItemDefinitionByName(const char* classname)
+{
+	static int offset = -1;
+	if(offset == -1)
+	{
 		if(!g_pGameConf[GameConf_CSST]->GetOffset("GetItemDefintionByName", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetItemDefintionByName offset");
+			smutils->LogError(myself, "Failed to get GetItemDefintionByName offset.");
 			return nullptr;
 		}
-		
-		PassInfo pass[1];
-		PassInfo ret;
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(const char *);
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 1);
 	}
 	
-	unsigned char vstk[sizeof(void *) + sizeof(const char *)];
-	unsigned char *vptr = vstk;
-
-	*(void **)vptr = pSchema;
-	vptr += sizeof(void *);
-	*(const char **)vptr = classname;
-
-	CEconItemDefinition *pItemDef = nullptr;
-	pCallWrapper->Execute(vstk, &pItemDef);
-	
-	return pItemDef;
+	return ((CEconItemDefinition*(VCallingConvention*)(void*, const char*))(*(void***)this)[offset])(this, classname);
 }
 
-CEconItemDefinition *CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIndex)
+CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIndex)
 {
 	static int offset = -1;
 	if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinitionByDefIndex", &offset) || offset == -1)
 	{
-		smutils->LogError(myself, "Failed to get GetItemDefinitionByDefIndex offset");
+		smutils->LogError(myself, "Failed to get GetItemDefinitionByDefIndex offset.");
 		return nullptr;
 	}
 	
@@ -115,694 +85,326 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 		};
 		
 		ItemMapMember *MapMember = nullptr;
-		int iMaxIdx = *(int *)((intptr_t)pSchema + offset + 20);
-		intptr_t ItemMap = *(intptr_t *)((intptr_t)pSchema + offset);
+		int iMaxIdx = *(int*)((intptr_t)this + offset + 20);
+		intptr_t ItemMap = *(intptr_t*)((intptr_t)this + offset);
 		for(int i = 0; i < iMaxIdx; i++)
 		{
-			MapMember = (ItemMapMember *)(ItemMap + i * sizeof(ItemMapMember));
+			MapMember = (ItemMapMember*)(ItemMap + i * sizeof(ItemMapMember));
 			if(MapMember->DefIndex == DefIndex) return MapMember->ItemDefinition;
 		}
 	}
+
 	return nullptr;
 }
 
-CEconItemAttributeDefinition *CEconItemSchema::GetAttributeDefinitionByDefIndex(uint16_t DefIndex)
+CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByDefIndex(uint16_t DefIndex)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if (!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
 		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetAttributeDefinitionInterface", &offset) || offset == -1)
 		{
 			smutils->LogError(myself, "Failed to get GetAttributeDefinitionInterface offset.");
 			return nullptr;
 		}
-		
-		PassInfo pass[1];
-		PassInfo ret;
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type = PassType_Basic;
-		pass[0].size = sizeof(int);
-
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(CEconItemAttributeDefinition *);
-
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 1);
 	}
 
-	unsigned char vstk[sizeof(void *) + sizeof(int)];
-	unsigned char *vptr = vstk;
-
-	*(void **)vptr = pSchema;
-	vptr += sizeof(void *);
-	*(int *)vptr = DefIndex;
-
-	CEconItemAttributeDefinition *pItemAttrDef;
-	pCallWrapper->Execute(vstk, &pItemAttrDef);
-
-	return pItemAttrDef;
+	return ((CEconItemAttributeDefinition*(VCallingConvention*)(void*, uint16_t))(*(void***)this)[offset])(this, DefIndex);
 }
 
 uint16_t CEconItemDefinition::GetDefinitionIndex()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetDefinitionIndex", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetDefinitionIndex", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetDefinitionIndex offset");
-			return -1;
+			smutils->LogError(myself, "Failed to get GetDefinitionIndex offset.");
+			return 0;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(uint16_t);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	uint16_t DefinitionIndex = 0;
-	pCallWrapper->Execute(vstk, &DefinitionIndex);
-	return DefinitionIndex;
+	return ((uint16_t(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	int (VCallingConvention* GetLoadoutSlot)(void*, int);
+
+	if (!g_pGameConf[GameConf_PTaH]->GetMemSig("GetLoadoutSlot", (void**)&GetLoadoutSlot) || !GetLoadoutSlot)
 	{
-		void *addr = nullptr;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetMemSig("GetLoadoutSlot", &addr) || !addr)
-		{
-			smutils->LogError(myself, "Failed to get GetLoadoutSlot location");
-			return -1;
-		}
-		
-		PassInfo pass[1];
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(int);
-
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		pCallWrapper = bintools->CreateCall(addr, CallConv_ThisCall, &ret, pass, 1);
+		smutils->LogError(myself, "Failed to get GetLoadoutSlot function.");
+		return -1;
 	}
-	
-	unsigned char vstk[sizeof(void *) + sizeof(int)];
-	unsigned char *vptr = vstk;
 
-	*(void **)vptr = this;
-	vptr += sizeof(void *);
-	*(int *)vptr = iTeam;
-
-	int LoadoutSlot = -1;
-	pCallWrapper->Execute(vstk, &LoadoutSlot);
-	return LoadoutSlot;
+	return GetLoadoutSlot(this, iTeam);
 }
 
 int CEconItemDefinition::GetNumSupportedStickerSlots()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetNumSupportedStickerSlots", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetNumSupportedStickerSlots", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetNumSupportedStickerSlots offset");
+			smutils->LogError(myself, "Failed to get GetNumSupportedStickerSlots offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int NumSupportedStickerSlots = -1;
-	pCallWrapper->Execute(vstk, &NumSupportedStickerSlots);
-	return NumSupportedStickerSlots;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
-char *CEconItemDefinition::GetClassName()
+const char* CEconItemDefinition::GetClassName()
 {
 	static int offset = -1;
 	if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetClassName", &offset) || offset == -1)
 	{
-		smutils->LogError(myself, "Failed to get GetClassName offset");
+		smutils->LogError(myself, "Failed to get GetClassName offset.");
 		return nullptr;
 	}
-	return *(char **)(this + offset);
+	return *(const char**)(this + offset);
 }
 
 int CEconItemView::GetCustomPaintKitIndex()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitIndex", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitIndex", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitIndex offset");
+			smutils->LogError(myself, "Failed to get GetCustomPaintKitIndex offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int CustomPaintKitIndex = -1;
-	pCallWrapper->Execute(vstk, &CustomPaintKitIndex);
-	return CustomPaintKitIndex;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetCustomPaintKitSeed()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitSeed", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitSeed", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitSeed offset");
+			smutils->LogError(myself, "Failed to get GetCustomPaintKitSeed offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int CustomPaintKitSeed = -1;
-	pCallWrapper->Execute(vstk, &CustomPaintKitSeed);
-	return CustomPaintKitSeed;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 float CEconItemView::GetCustomPaintKitWear(float def)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitWear", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitWear", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitWear offset");
+			smutils->LogError(myself, "Failed to get GetCustomPaintKitWear offset.");
 			return def;
 		}
-		
-		PassInfo pass[1];
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Float;
-		pass[0].size  = sizeof(float);
-
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Float;
-		ret.size = sizeof(float);
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 1);
 	}
 
-	
-	unsigned char vstk[sizeof(void *) + sizeof(float)];
-	unsigned char *vptr = vstk;
-
-	*(void **)vptr = this;
-	vptr += sizeof(void *);
-	*(float *)vptr = def;
-
-	float CustomPaintKitWear = def;
-	pCallWrapper->Execute(vstk, &CustomPaintKitWear);
-	return CustomPaintKitWear;
+	return ((float(VCallingConvention*)(void*, float))(*(void***)this)[offset])(this, def);
 }
 
 float CEconItemView::GetStickerAttributeBySlotIndexFloat(int slot, EStickerAttributeType StickerAttribut, float def)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexFloat", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexFloat", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexFloat offset");
+			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexFloat offset.");
 			return def;
 		}
-		
-		PassInfo pass[3];
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(int);
-		pass[1].flags = PASSFLAG_BYVAL;
-		pass[1].type  = PassType_Basic;
-		pass[1].size  = sizeof(EStickerAttributeType);
-		pass[2].flags = PASSFLAG_BYVAL;
-		pass[2].type  = PassType_Float;
-		pass[2].size  = sizeof(float);
-
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Float;
-		ret.size = sizeof(float);
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 3);
 	}
 
-	
-	unsigned char vstk[sizeof(void *) + sizeof(int) + sizeof(float) + sizeof(EStickerAttributeType)];
-	unsigned char *vptr = vstk;
-
-	*(void **)vptr = this;
-	vptr += sizeof(void *);
-	*(int *)vptr = slot;
-	vptr += sizeof(int);
-	*(EStickerAttributeType *)vptr = StickerAttribut;
-	vptr += sizeof(EStickerAttributeType);
-	*(float *)vptr = def;
-
-	float StickerAttributeBySlotIndexFloat = def;
-	pCallWrapper->Execute(vstk, &StickerAttributeBySlotIndexFloat);
-
-	return StickerAttributeBySlotIndexFloat;
+	return ((float(VCallingConvention*)(void*, int, EStickerAttributeType, float))(*(void***)this)[offset])(this, slot, StickerAttribut, def);
 }
 
 int CEconItemView::GetStickerAttributeBySlotIndexInt(int slot, EStickerAttributeType StickerAttribut, int def)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexInt", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexInt", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexInt offset");
+			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexInt offset.");
 			return def;
 		}
-		
-		PassInfo pass[3];
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(int);
-		pass[1].flags = PASSFLAG_BYVAL;
-		pass[1].type  = PassType_Basic;
-		pass[1].size  = sizeof(EStickerAttributeType);
-		pass[2].flags = PASSFLAG_BYVAL;
-		pass[2].type  = PassType_Basic;
-		pass[2].size  = sizeof(float);
-
-		PassInfo ret;
-		ret.flags = PASSFLAG_BYVAL;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(float);
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, pass, 3);
 	}
-	
-	unsigned char vstk[sizeof(void *) + sizeof(int) * 2 + sizeof(EStickerAttributeType)];
-	unsigned char *vptr = vstk;
 
-	*(void **)vptr = this;
-	vptr += sizeof(void *);
-	*(int *)vptr = slot;
-	vptr += sizeof(int);
-	*(EStickerAttributeType *)vptr = StickerAttribut;
-	vptr += sizeof(EStickerAttributeType);
-	*(int *)vptr = def;
-
-	int StickerAttributeBySlotIndexInt = def;
-	pCallWrapper->Execute(vstk, &StickerAttributeBySlotIndexInt);
-	return StickerAttributeBySlotIndexInt;
+	return ((int(VCallingConvention*)(void*, int, EStickerAttributeType, int))(*(void***)this)[offset])(this, slot, StickerAttribut, def);
 }
 
 bool CEconItemView::IsTradable()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("IsTradable", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IsTradable", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get IsTradable offset");
+			smutils->LogError(myself, "Failed to get IsTradable offset.");
 			return false;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(bool);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	bool IsTradable = false;
-	pCallWrapper->Execute(vstk, &IsTradable);
-	return IsTradable;
+	return ((bool(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 bool CEconItemView::IsMarketable()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("IsMarketable", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IsMarketable", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get IsMarketable offset");
+			smutils->LogError(myself, "Failed to get IsMarketable offset.");
 			return false;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(bool);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	bool IsMarketable = false;
-	pCallWrapper->Execute(vstk, &IsMarketable);
-	return IsMarketable;
+	return ((bool(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
-CEconItemDefinition *CEconItemView::GetItemDefinition()
+CEconItemDefinition* CEconItemView::GetItemDefinition()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinition", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinition", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetItemDefinition offset");
-			return NULL;
+			smutils->LogError(myself, "Failed to get GetItemDefinition offset.");
+			return nullptr;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(void *);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	CEconItemDefinition *ItemDefinition = nullptr;
-	pCallWrapper->Execute(vstk, &ItemDefinition);
-	return ItemDefinition;
+	return ((CEconItemDefinition*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetAccountID()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetAccountID", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetAccountID", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetAccountID offset");
+			smutils->LogError(myself, "Failed to get GetAccountID offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int AccountID = -1;
-	pCallWrapper->Execute(vstk, &AccountID);
-	return AccountID;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetQuality()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetQuality", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetQuality", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetQuality offset");
+			smutils->LogError(myself, "Failed to get GetQuality offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int Quality = -1;
-	pCallWrapper->Execute(vstk, &Quality);
-	return Quality;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetRarity()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetRarity", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetRarity", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetRarity offset");
+			smutils->LogError(myself, "Failed to get GetRarity offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int Rarity = -1;
-	pCallWrapper->Execute(vstk, &Rarity);
-	return Rarity;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetFlags()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetFlags", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetFlags", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetFlags offset");
+			smutils->LogError(myself, "Failed to get GetFlags offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int Flags = -1;
-	pCallWrapper->Execute(vstk, &Flags);
-	return Flags;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetOrigin()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetOrigin", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetOrigin", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetOrigin offset");
+			smutils->LogError(myself, "Failed to get GetOrigin offset.");
 			return -1;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(int);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	int Origin = -1;
-	pCallWrapper->Execute(vstk, &Origin);
-	return Origin;
+	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
-char *CEconItemView::GetCustomName()
+const char* CEconItemView::GetCustomName()
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomName", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomName", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get GetCustomName offset");
-			return NULL;
+			smutils->LogError(myself, "Failed to get GetCustomName offset.");
+			return nullptr;
 		}
-		
-		PassInfo ret;
-
-		ret.flags = PASSFLAG_BYREF;
-		ret.type = PassType_Basic;
-		ret.size = sizeof(char *);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
 	}
-	
-	unsigned char vstk[sizeof(void *)];
-	unsigned char *vptr = vstk;
-	
-	*(void **)vptr = (void *)this;
 
-	char *CustomName = NULL;
-	pCallWrapper->Execute(vstk, &CustomName);
-	return CustomName;
+	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 // Thank you Kailo
 int CEconItemView::GetKillEaterValue() 
 {
-	CEconItemAttributeDefinition *pItemAttrDef = g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(80); //"kill eater"
-	unsigned int KillEaterValue;
-	
-	CAttributeIterator_GetTypedAttributeValue<unsigned int, unsigned int> it(pItemAttrDef, &KillEaterValue);
-	this->IterateAttributes(&it);
-	
-	if (it.m_found) return KillEaterValue;
+	if (g_pCEconItemSchema)
+	{
+		CEconItemAttributeDefinition* pItemAttrDef = g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(80); //"kill eater"
+		unsigned int KillEaterValue;
+
+		CAttributeIterator_GetTypedAttributeValue<unsigned int, unsigned int> it(pItemAttrDef, &KillEaterValue);
+		this->IterateAttributes(&it);
+
+		if (it.m_found) return KillEaterValue;
+	}
+	else smutils->LogError(myself, "g_pCEconItemSchema == NULL.");
+
 	return -1;
 }
 
-void CEconItemView::IterateAttributes(IEconItemAttributeIterator *AttributeIterator)
+void CEconItemView::IterateAttributes(IEconItemAttributeIterator* AttributeIterator)
 {
-	static ICallWrapper *pCallWrapper = nullptr;
-	if(!pCallWrapper)
+	static int offset = -1;
+	if (offset == -1)
 	{
-		int offset = -1;
-		
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("IterateAttributes", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IterateAttributes", &offset) || offset == -1)
 		{
-			smutils->LogError(myself, "Failed to get IterateAttributes offset");
+			smutils->LogError(myself, "Failed to get IterateAttributes offset.");
 			return;
 		}
-		
-		PassInfo pass[1];
-		
-		pass[0].flags = PASSFLAG_BYVAL;
-		pass[0].type  = PassType_Basic;
-		pass[0].size  = sizeof(IEconItemAttributeIterator *);
-		
-		pCallWrapper = bintools->CreateVCall(offset, 0, 0, NULL, pass, 1);
 	}
-	
-	unsigned char vstk[sizeof(void *) + sizeof(IEconItemAttributeIterator *)];
-	unsigned char *vptr = vstk;
 
-	*(void **)vptr = this;
-	vptr += sizeof(void *);
-	*(IEconItemAttributeIterator **)vptr = AttributeIterator;
-
-	pCallWrapper->Execute(vstk, NULL);
+	((void(VCallingConvention*)(void*, IEconItemAttributeIterator*))(*(void***)this)[offset])(this, AttributeIterator);
 }

@@ -37,10 +37,15 @@
  * @brief Sample extension code header.
  */
 #define MAXPLAYERS 65
+
+#ifdef WIN32
+#define VCallingConvention __thiscall
+#else
+#define VCallingConvention __cdecl
+#endif
  
  
 #include "smsdk_ext.h"
-#include <IBinTools.h>
 #include <ISDKTools.h>
 #include "CDetour/detours.h"
 #include <sourcehook.h>
@@ -158,7 +163,6 @@ public:
 #define GameConf_PTaH 2
 #define GameConf_CSST 3
 
-extern IBinTools *bintools;
 extern ISDKTools *sdktools;
 extern IGameConfig *g_pGameConf[4];
 
