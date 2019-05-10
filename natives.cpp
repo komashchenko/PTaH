@@ -373,6 +373,169 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 	return gamehelpers->EntityToBCompatRef(((CBaseEntity*(VCallingConvention*)(void*, const char*, int, CEconItemView*, bool, Vector*))(*(void***)pEntity)[iGiveNamedItemOffset])(pEntity, strSource, 0, (CEconItemView*)params[3], false, Origin.IsValid() ? &Origin : nullptr));
 }
 
+static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t* params)
+{
+	if ((params[1] < 1))
+	{
+		return pContext->ThrowNativeError("DefenitionIndex %d is invalid", params[1]);
+	}
+	
+	cell_t* source_origin;
+	pContext->LocalToPhysAddr(params[2], &source_origin);
+
+	Vector Origin; Origin.Invalidate();
+ 	if (source_origin != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		Origin.x = sp_ctof(source_origin[0]);
+		Origin.y = sp_ctof(source_origin[1]);
+		Origin.z = sp_ctof(source_origin[2]);
+	}
+	else
+	{
+		return pContext->ThrowNativeError("NULL_VECTOR in the Origin array parameter");
+	}
+ 
+	cell_t* source_qangle;
+	pContext->LocalToPhysAddr(params[3], &source_qangle);
+	
+	QAngle Angles; Angles.Invalidate();
+	if (source_qangle != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		Angles.x = sp_ctof(source_qangle[0]);
+		Angles.y = sp_ctof(source_qangle[1]);
+		Angles.z = sp_ctof(source_qangle[2]);
+	}
+	else
+	{
+		return pContext->ThrowNativeError("NULL_VECTOR in the Angles array parameter");
+	}
+	
+	#ifdef WIN32
+	CBaseEntity* (__thiscall* SpawnItem)(uint16_t, Vector*, QAngle*, int, int, int);
+	#else
+	CBaseEntity* (__cdecl* SpawnItem)(void*, uint16_t, Vector*, QAngle*, int, int, int);
+	#endif
+	
+	if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", (void**)&SpawnItem) || !SpawnItem)
+	{
+		smutils->LogError(myself, "Failed to get SpawnItem function.");
+		return -1;
+	}
+
+	#ifdef WIN32
+	pEntity = SpawnItem(params[1], Origin, Angles, 1, 4, 0);
+	#else
+	pEntity = SpawnItem(nullptr, params[1], Origin, Angles, 1, 4, 0);
+	#endif
+	
+	return gamehelpers->EntityToBCompatRef(pEntity);
+}	
+
+static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params)
+{
+	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+	CBaseEntity* pEntity;
+	if((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
+	{
+		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
+	}
+	
+	CEconItemView pItem = (CEconItemView*)params[3];
+	CBaseEntity* pWeapon = gamehelpers->ReferenceToEntity(params[2]);
+	if(!pWeapon && !pItem)
+	{
+		return pContext->ThrowNativeError("Entity %d is invalid", params[2]);
+	}
+	
+	IServerNetworkable* pNet = ((IServerUnknown*)pWeapon)->GetNetworkable();
+	if (!pNet || !UTIL_ContainsDataTable(pNet->GetServerClass()->m_pTable, "DT_BaseCombatWeapon"))
+	{
+		return pContext->ThrowNativeError("Entity %d is not weapon", params[2]);
+	}
+	
+	cell_t* source_origin;
+	pContext->LocalToPhysAddr(params[4], &source_origin);
+
+	Vector Origin; Origin.Invalidate();
+ 	if (source_origin != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		Origin.x = sp_ctof(source_origin[0]);
+		Origin.y = sp_ctof(source_origin[1]);
+		Origin.z = sp_ctof(source_origin[2]);
+	}
+	else
+	{
+		return pContext->ThrowNativeError("Origin is contain NULL_VECTOR");
+	}
+ 
+	cell_t* source_qangle;
+	pContext->LocalToPhysAddr(params[5], &source_qangle);
+	
+	QAngle Angles; Angles.Invalidate();
+	if (source_qangle != pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		Angles.x = sp_ctof(source_qangle[0]);
+		Angles.y = sp_ctof(source_qangle[1]);
+		Angles.z = sp_ctof(source_qangle[2]);
+	}
+	else
+	{
+		return pContext->ThrowNativeError("Angles are contain NULL_VECTOR");
+	}
+
+	#ifdef WIN32
+	void (__thiscall* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float);
+	#else
+	long double (__cdecl* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float);
+	#endif
+	
+	if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets) || !FX_FireBullets)
+	{
+		smutils->LogError(myself, "Failed to get FX_FireBullets function.");
+		return 0;
+	}
+
+	/*FX_FireBullets(
+		int iPlayerIndex,
+		CWeaponCSBaseGun *weapon,
+		void *ItemDefinition, // ? может быть 0, тогда находиться по индексу переданому во 2ом параметре
+		Vector *vOrigin,
+		QAngle *vAngles,
+		int iMode,
+		int iSeed, 
+		float flInaccuracy, // Inaccuracy ?
+		float flSpread, // Spread
+		float flFishtail, // AccuracyFishtail
+		float flNextAttack, // not used
+		WeaponSound_t sound_type, // 1 or 12 if silenced
+		float m_flRecoilIndex
+	);*/
+	
+	static unsigned int offset = 0;
+	if(offset == 0)
+	{
+		datamap_t* pMap; 
+		if ((pMap = CBaseEntity_GetDataDescMap(pEntity)) == nullptr) 
+		{ 
+			return pContext->ThrowNativeError("Could not retrieve datamap"); 
+		} 
+		sm_datatable_info_t info; 
+		gamehelpers->FindDataMapInfo(pMap, "m_bLagCompensate", &info);
+		offset = info.actual_offset;
+	}
+	
+	bool* bLagCompensation = *(bool *)((intptr_t)pEntity + offset);
+	bool prev = *bLagCompensation;
+	*bLagCompensation = false;
+	FX_FireBullets(params[1], pWeapon, pItem, Origin, Angles, params[6], params[7], sp_ctof(params[8]), sp_ctof(params[9]), sp_ctof(params[10]), 0.0, params[11], sp_ctof(params[12]));
+	*bLagCompensation = prev; /// LagCompensation fix
+
+	return 1;
+}
+
 static cell_t PTaH_MD5File(IPluginContext* pContext, const cell_t* params)
 {
 	FILE* pFile;
@@ -486,7 +649,6 @@ cell_t PTaH_AddrInfoClearMem(IPluginContext* pContext, const cell_t* params)
 	else return pContext->ThrowNativeError("AddrInfo invalid");
 }
 
-
 extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
 	{ "PTaH_Version",										PTaH_Version },
@@ -514,6 +676,8 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
 	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEater },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
+	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
+	{ "PTaH_FX_FireBullets",								PTaH_FX_FireBullets },
 	{ "PTaH_MD5File",										PTaH_MD5File },
 	{ "PTaH_GetAddrInfo",									PTaH_GetAddrInfo },
 	{ "PTaH_Gai_StrError",									PTaH_Gai_StrError },
