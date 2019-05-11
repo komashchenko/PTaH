@@ -8,7 +8,7 @@
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, version 3.0, as published by the
  * Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
@@ -28,15 +28,16 @@
  *
  * Version: $Id$
  */
+
 class CEconItemAttributeDefinition;
 class CAttribute_String;
 
-enum EStickerAttributeType 
-{ 
-    StickerID,
-    WearProgress,
-    PatternScale,
-    PatternRotation 
+enum EStickerAttributeType
+{
+	StickerID,
+	WearProgress,
+	PatternScale,
+	PatternRotation
 };
 
 class CEconItemDefinition
@@ -51,11 +52,11 @@ public:
 class CEconItemSchema
 {
 public:
-	static void* operator new(size_t);
+	static void* operator new(size_t) throw();
 	static void operator delete(void*) { };
 	CEconItemDefinition* GetItemDefinitionByName(const char* classname);
 	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t DefIndex);
-	
+
 	CEconItemAttributeDefinition *GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
 };
 
@@ -87,7 +88,7 @@ public:
 	int GetOrigin();
 	const char* GetCustomName();
 	int GetKillEaterValue();
-	
+
 	void IterateAttributes(IEconItemAttributeIterator* AttributeIterator);
 };
 
@@ -134,6 +135,7 @@ public:
 			m_found = true;
 			*m_value = (B)value;
 		}
+		
 		return !m_found;
 	}
 

@@ -8,7 +8,7 @@
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, version 3.0, as published by the
  * Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
@@ -36,6 +36,7 @@
 #include "netmessages.pb.h"
 #include <amtl/am-thread-utils.h> 
 
+
 template <int Type, class NetMessage, int Group, bool reliable>
 class CNetMessagePB : public INetMessage, public NetMessage {
 public:
@@ -52,7 +53,7 @@ class CForwardManager
 public:
 	bool Init();
 	void Shutdown();
-	
+
 	//GiveNamedItem
 	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin);
 	//GiveNamedItemPre
@@ -67,14 +68,14 @@ public:
 	void ClientPrint(edict_t *pEdict, const char *szMsg);
 	//OnClientConnect
 	IClient *OnClientConnect(const netadr_t & address, int nProtocol, int iChallenge, int nAuthProtocol, const char *pchName, const char *pchPassword, const char *pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect *> &pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char *pUnknown, int iUnknown);
-	
-	
+
+
 	void HookClient(int client);
 	void UnhookClient(int client);
-	
+
 	void OnGameFrame(bool simulating);
 
-	int m_iHookId[5][MAXPLAYERS+1];
+	int m_iHookId[5][MAXPLAYERS + 1];
 
 	IChangeableForward *m_pGiveNamedItem;
 	IChangeableForward *m_pGiveNamedItemPre;
@@ -91,7 +92,7 @@ public:
 	IChangeableForward *m_pMapContentList;
 	CDetour *m_pLoggingSeverity;
 	IChangeableForward *m_pServerConsolePrint;
-	
+
 	ke::ThreadId Thread_Id;
 };
 
