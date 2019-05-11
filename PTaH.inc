@@ -490,6 +490,73 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = CEconItemView_NULL, const float Origin[3] = NULL_VECTOR);
 
 
+/**
+ *  Spawn item by a definition index at the coordionates.
+ * @param DefIndex          The definition index.
+ * @param Origin            Coordinates the item will be created at.
+ * @param Angles            Angles the item will be created at.
+ * -
+ * @return Returns weapon index.
+ * -
+ * @error NULL_VECTOR in Origin and Angles arguments.
+*/
+native int PTaH_SpawnItemFromDefIndex(int DefIndex, const float Origin[3] = {0.0, 0.0, 0.0}, const float Angles[3] = {0.0, 0.0, 0.0});
+
+/**
+ *  Emulate bullet shot on the server and does the damage calculations.
+ * @param iClient           The Player Index.
+ * @param iWeapon           The Weapon index.
+ * @param Item              Customization item.
+ * @param Origin            Coordinates the bullet will be created at.
+ * @param Angles            Angles the bullet will be created at.
+ * @param iMode             Mode index.
+ * @param iSeed             Randomizing seed.
+ * @param flInaccuracy      Inaccuracy variable.
+ * @param flSpread          Spread variable.
+ * @param flFishtail        Accuracy Fishtail.
+ * @param iSoundType        Sound type. (1 or 12 for silenced, 0 for none sound)
+ * @param flRecoilIndex     Recoil variable.
+*/
+native void PTaH_FX_FireBullets(int iClient, int iWeapon = -1, CEconItemView Item = view_as<CEconItemView>(0), const float Origin[3], const float Angles[3], int iMode, int iSeed, float flInaccuracy, float flSpread, float flFishtail, int iSoundType, float flRecoilIndex)
+
+/**
+ *  Emulate bullet shot on the server and create an effect.
+ * @param iClient           The Player Index.
+ * @param iWeapon           The Weapon index.
+ * @param Item              Customization item.
+ * @param Origin            Coordinates the bullet will be created at.
+ * @param Angles            Angles the bullet will be created at.
+ * @param iMode             Mode index.
+ * @param iSeed             Randomizing seed.
+ * @param flInaccuracy      Inaccuracy variable.
+ * @param flSpread          Spread variable.
+ * @param flFishtail        Accuracy Fishtail.
+ * @param iSoundType        Sound type. (1 or 12 for silenced, 0 for none sound)
+ * @param flRecoilIndex     Recoil variable.
+*/
+stock void PTaH_FireBullets(int iClient, int iWeapon = -1, CEconItemView Item = view_as<CEconItemView>(0), const float Origin[3], const float Angles[3], int iMode, int iSeed, float flInaccuracy, float flSpread, float flFishtail, int iSoundType, float flRecoilIndex)
+{
+    TE_Start("Shotgun Shot");
+    TE_WriteVector("m_vecOrigin", Origin);
+    TE_WriteFloat("m_vecAngles[0]", Angles[0]);
+    TE_WriteFloat("m_vecAngles[1]", Angles[1]);
+    TE_WriteNum("m_weapon", view_as<int>(Item));
+    TE_WriteNum("m_iMode", iMode);
+    TE_WriteNum("m_iSeed", iSeed);
+    TE_WriteNum("m_iPlayer", iClient - 1);
+    TE_WriteFloat("m_fInaccuracy", flInaccuracy);
+    TE_WriteFloat("m_fSpread", flSpread);
+    TE_WriteNum("m_iSoundType", iSoundType);
+    TE_WriteFloat("m_flRecoilIndex", flRecoilIndex);
+    TE_SendToAll();
+
+    // Emulate shot on the server side and block lag compensation
+    bool bLock = view_as<bool>(GetEntProp(iClient, Prop_Data, "m_bLagCompensation"));
+    SetEntProp(iClient, Prop_Data, "m_bLagCompensation", false);
+    PTaH_FX_FireBullets(iClient, iWeapon, Item, Origin, Angles, iMode, iSeed, flInaccuracy, flSpread, flFishtail, iSoundType, flRecoilIndex);
+    SetEntProp(iClient, Prop_Data, "m_bLagCompensation", bLock);
+}
+
 
 public Extension __ext_PTaH = 
 {
@@ -535,5 +602,7 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
+	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
+	MarkNativeAsOptional("PTaH_FX_FireBullets");
 }
 #endif
