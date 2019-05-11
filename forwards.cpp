@@ -8,7 +8,7 @@
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, version 3.0, as published by the
  * Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
@@ -35,6 +35,7 @@
 #include "tier0/dbg.h"
 #include <queue>
 #include <string>
+
 
 CForwardManager g_pPTaHForwards;
 struct SCPCache
@@ -65,44 +66,44 @@ SH_DECL_HOOK1_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool);
 
 DETOUR_DECL_MEMBER1(CDownloadListGenerator, void, const char *, file_name)
 {
-    if (file_name != NULL && g_pPTaHForwards.m_pMapContentList->GetFunctionCount() > 0)
-    {
-        char sFileByf[256];
-        cell_t res = PLUGIN_CONTINUE;
-        strncpy(sFileByf, file_name, 256);
-        g_pPTaHForwards.m_pMapContentList->PushStringEx(sFileByf, 256, SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-        g_pPTaHForwards.m_pMapContentList->Execute(&res);
-		if(res != Pl_Continue)
+	if (file_name != NULL && g_pPTaHForwards.m_pMapContentList->GetFunctionCount() > 0)
+	{
+		char sFileByf[256];
+		cell_t res = PLUGIN_CONTINUE;
+		strncpy(sFileByf, file_name, 256);
+		g_pPTaHForwards.m_pMapContentList->PushStringEx(sFileByf, 256, SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		g_pPTaHForwards.m_pMapContentList->Execute(&res);
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed) DETOUR_MEMBER_CALL(CDownloadListGenerator)(sFileByf);
+			if (res == Pl_Changed) DETOUR_MEMBER_CALL(CDownloadListGenerator)(sFileByf);
 			return;
 		}
-    }
-    DETOUR_MEMBER_CALL(CDownloadListGenerator)(file_name);
-    return;
+	}
+	DETOUR_MEMBER_CALL(CDownloadListGenerator)(file_name);
+	return;
 }
 
 DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 {
-	if(szMsg != NULL && g_pPTaHForwards.m_pExecuteStringCommand->GetFunctionCount() > 0)
+	if (szMsg != NULL && g_pPTaHForwards.m_pExecuteStringCommand->GetFunctionCount() > 0)
 	{
 		char szMsg_buf[512];
 		V_strncpy(szMsg_buf, szMsg, sizeof(szMsg_buf));
 		cell_t res = PLUGIN_CONTINUE;
-		
-		#ifdef WIN32
-		int client = reinterpret_cast<IClient *>(this)->GetPlayerSlot()+1;
-		#else
-		int client = reinterpret_cast<IClient *>(this+4)->GetPlayerSlot()+1;
-		#endif
-		
+
+#ifdef WIN32
+		int client = reinterpret_cast<IClient *>(this)->GetPlayerSlot() + 1;
+#else
+		int client = reinterpret_cast<IClient *>(this + 4)->GetPlayerSlot() + 1;
+#endif
+
 		g_pPTaHForwards.m_pExecuteStringCommand->PushCell(client);
 		g_pPTaHForwards.m_pExecuteStringCommand->PushStringEx(szMsg_buf, sizeof(szMsg_buf), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		g_pPTaHForwards.m_pExecuteStringCommand->Execute(&res);
-		
-		if(res != Pl_Continue)
+
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed) return DETOUR_MEMBER_CALL(ExecuteStringCommand)(szMsg_buf);
+			if (res == Pl_Changed) return DETOUR_MEMBER_CALL(ExecuteStringCommand)(szMsg_buf);
 			else return false;
 		}
 	}
@@ -111,22 +112,22 @@ DETOUR_DECL_MEMBER1(ExecuteStringCommand, bool, const char *, szMsg)
 
 DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, channelID, LoggingSeverity_t, severity, Color, color, const tchar *, pMessage)
 {
-	if(pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0)
+	if (pMessage != NULL && g_pPTaHForwards.m_pServerConsolePrint->GetFunctionCount() > 0)
 	{
-		if(g_pPTaHForwards.Thread_Id == ke::GetCurrentThreadId())
+		if (g_pPTaHForwards.Thread_Id == ke::GetCurrentThreadId())
 		{
 			cell_t res = PLUGIN_CONTINUE;
 			g_pPTaHForwards.m_pServerConsolePrint->PushString(pMessage);
 			g_pPTaHForwards.m_pServerConsolePrint->PushCell(severity);
 			g_pPTaHForwards.m_pServerConsolePrint->PushCell(true);
 			g_pPTaHForwards.m_pServerConsolePrint->Execute(&res);
-			
-			if(res != Pl_Continue) return LR_CONTINUE;
+
+			if (res != Pl_Continue) return LR_CONTINUE;
 		}
 		else
 		{
 			//Messages not from main thread we cache
-			SCPCacheQueue.push({pMessage, severity});
+			SCPCacheQueue.push({ pMessage, severity });
 		}
 	}
 	return DETOUR_MEMBER_CALL(LoggingSeverity)(channelID, severity, color, pMessage);
@@ -135,22 +136,22 @@ DETOUR_DECL_MEMBER4(LoggingSeverity, LoggingResponse_t, LoggingChannelID_t, chan
 void CForwardManager::OnGameFrame(bool simulating)
 {
 	//We send all messages from cache
-	while(!SCPCacheQueue.empty())
+	while (!SCPCacheQueue.empty())
 	{
 		SCPCache &Cache = SCPCacheQueue.front();
-		
+
 		m_pServerConsolePrint->PushString(Cache.sMessage.c_str());
 		m_pServerConsolePrint->PushCell(Cache.severity);
 		m_pServerConsolePrint->PushCell(false);
 		m_pServerConsolePrint->Execute(nullptr);
-		
+
 		SCPCacheQueue.pop();
 	}
 }
 
 DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, uint64_t, const char *, szItem, int, iTeam, bool, bUnknown, void *, vUnknown)
 {
-	if(g_pPTaHForwards.IgnoredCEconItemView)
+	if (g_pPTaHForwards.IgnoredCEconItemView)
 	{
 		g_pPTaHForwards.IgnoredCEconItemView = false;
 		return 0;
@@ -165,7 +166,7 @@ size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
 	size_t real_bytes = 0;
 	size_t length = strlen(str);
 
-	for (size_t i=0; i<length; i++)
+	for (size_t i = 0; i < length; i++)
 	{
 		if (real_bytes >= maxlength)
 		{
@@ -173,7 +174,7 @@ size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
 		}
 		buffer[real_bytes++] = (unsigned char)str[i];
 		if (str[i] == '\\'
-			&& str[i+1] == 'x')
+			&& str[i + 1] == 'x')
 		{
 			if (i + 3 >= length)
 			{
@@ -182,13 +183,13 @@ size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
 			/* Get the hex part */
 			char s_byte[3];
 			int r_byte;
-			s_byte[0] = str[i+2];
-			s_byte[1] = str[i+3];
+			s_byte[0] = str[i + 2];
+			s_byte[1] = str[i + 3];
 			s_byte[2] = '\n';
 			/* Read it as an integer */
 			sscanf(s_byte, "%x", &r_byte);
 			/* Save the value */
-			buffer[real_bytes-1] = (unsigned char)r_byte;
+			buffer[real_bytes - 1] = (unsigned char)r_byte;
 			/* Adjust index */
 			i += 3;
 		}
@@ -201,33 +202,33 @@ size_t UTIL_StringToSignature(const char *str, char buffer[], size_t maxlength)
 bool CForwardManager::Init()
 {
 	Thread_Id = ke::GetCurrentThreadId();
-	
+
 	int offset = -1;
-	
-	if(!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &offset))
+
+	if (!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &offset))
 	{
 		smutils->LogError(myself, "Failed to get GiveNamedItem offset.");
 		return false;
 	}
 	SH_MANUALHOOK_RECONFIGURE(GiveNamedItemHook, offset, 0, 0);
 	SH_MANUALHOOK_RECONFIGURE(GiveNamedItemPreHook, offset, 0, 0);
-	
-	if(!g_pGameConf[GameConf_SDKT]->GetOffset("SetEntityModel", &offset))
+
+	if (!g_pGameConf[GameConf_SDKT]->GetOffset("SetEntityModel", &offset))
 	{
 		smutils->LogError(myself, "Failed to get SetEntityModel offset.");
 		return false;
 	}
-	
+
 	SH_MANUALHOOK_RECONFIGURE(SetModelHook, offset, 0, 0);
 	SH_MANUALHOOK_RECONFIGURE(SetModelPreHook, offset, 0, 0);
-	
-	if(!g_pGameConf[GameConf_SDKH]->GetOffset("Weapon_CanUse", &offset))
+
+	if (!g_pGameConf[GameConf_SDKH]->GetOffset("Weapon_CanUse", &offset))
 	{
 		smutils->LogError(myself, "Failed to get Weapon_CanUse offset.");
 		return false;
-	}	
+	}
 	SH_MANUALHOOK_RECONFIGURE(WeaponCanUseHook, offset, 0, 0);
-	
+
 	m_pCDownloadListGenerator = DETOUR_CREATE_MEMBER(CDownloadListGenerator, "CDownloadListGenerator");
 	if (!m_pCDownloadListGenerator)
 	{
@@ -235,21 +236,21 @@ bool CForwardManager::Init()
 		return false;
 	}
 	else m_pCDownloadListGenerator->EnableDetour();
-	
+
 	if (!g_pGameConf[GameConf_PTaH]->GetOffset("ConnectClient", &offset) || offset == -1)
 	{
 		smutils->LogError(myself, "Failed to get ConnectClient offset.");
 		return false;
 	}
 	SH_MANUALHOOK_RECONFIGURE(ConnectClient, offset, 0, 0);
-	
+
 	if (!g_pGameConf[GameConf_PTaH]->GetOffset("RejectConnection", &offset) || offset == -1)
 	{
 		smutils->LogError(myself, "Failed to get RejectConnection offset.");
 		return false;
 	}
 	SH_MANUALHOOK_RECONFIGURE(RejectConnection, offset, 0, 0);
-	
+
 	m_pDExecuteStringCommand = DETOUR_CREATE_MEMBER(ExecuteStringCommand, "ExecuteStringCommand");
 	if (!m_pDExecuteStringCommand)
 	{
@@ -257,7 +258,7 @@ bool CForwardManager::Init()
 		return false;
 	}
 	else m_pDExecuteStringCommand->EnableDetour();
-	
+
 	m_pFindMatchingWeaponsForTeamLoadout = DETOUR_CREATE_MEMBER(FindMatchingWeaponsForTeamLoadout, "FindMatchingWeaponsForTeamLoadout");
 	if (!m_pFindMatchingWeaponsForTeamLoadout)
 	{
@@ -265,41 +266,41 @@ bool CForwardManager::Init()
 		return false;
 	}
 	else m_pFindMatchingWeaponsForTeamLoadout->EnableDetour();
-	
-	
-	#ifdef WIN32
+
+
+#ifdef WIN32
 	HMODULE tier0 = GetModuleHandle("tier0.dll");
-	
+
 	char signature[30];
 	size_t size = UTIL_StringToSignature(g_pGameConf[GameConf_PTaH]->GetKeyValue("ServerConsolePrint_signature_windows"), signature, 30);
-	
+
 	void * fn = memutils->FindPattern(tier0, signature, size);
-	
-	if(!fn)
+
+	if (!fn)
 	{
 		smutils->LogError(myself, "Failed get signature ServerConsolePrint.");
 		return false;
 	}
-	#else
+#else
 	void * tier0 = dlopen("libtier0.so", RTLD_NOW);
 	// Thank you rom4s, Accelerator74
 	void * fn = dlsym(tier0, "LoggingSystem_Log");
-	
-	if(!fn)
+
+	if (!fn)
 	{
 		smutils->LogError(myself, "Failed get LoggingSystem_Log.");
 		return false;
 	}
-	
-	if(!g_pGameConf[GameConf_PTaH]->GetOffset("ServerConsolePrint", &offset))
+
+	if (!g_pGameConf[GameConf_PTaH]->GetOffset("ServerConsolePrint", &offset))
 	{
 		smutils->LogError(myself, "Failed to get ServerConsolePrint offset.");
 		return false;
 	}
-	
+
 	fn = (void *)((intptr_t)fn + offset);
-	#endif
-	
+#endif
+
 	m_pLoggingSeverity = DETOUR_CREATE_MEMBER(LoggingSeverity, fn);
 	if (!m_pLoggingSeverity)
 	{
@@ -307,13 +308,13 @@ bool CForwardManager::Init()
 		return false;
 	}
 	else m_pLoggingSeverity->EnableDetour();
-	
-	
+
+
 	SH_ADD_HOOK(IVEngineServer, ClientPrintf, engine, SH_MEMBER(this, &CForwardManager::ClientPrint), false);
 	SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
 	SH_ADD_HOOK(IServerGameDLL, GameFrame, gamedll, SH_MEMBER(this, &CForwardManager::OnGameFrame), false);
 
-	
+
 	m_pGiveNamedItem = forwards->CreateForwardEx(NULL, ET_Ignore, 6, NULL, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Array);
 	m_pGiveNamedItemPre = forwards->CreateForwardEx(NULL, ET_Hook, 6, NULL, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
 	m_pWeaponCanUse = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_Cell, Param_Cell, Param_Cell);
@@ -324,21 +325,21 @@ bool CForwardManager::Init()
 	m_pOnClientConnect = forwards->CreateForwardEx(NULL, ET_Hook, 5, NULL, Param_String, Param_String, Param_String, Param_String, Param_String);
 	m_pExecuteStringCommand = forwards->CreateForwardEx(NULL, ET_Hook, 2, NULL, Param_Cell, Param_String);
 	m_pServerConsolePrint = forwards->CreateForwardEx(NULL, ET_Hook, 3, NULL, Param_String, Param_Cell, Param_Cell);
-	
+
 	return true;
 }
 
 void CForwardManager::Shutdown()
 {
-	if(m_pLoggingSeverity) m_pLoggingSeverity->Destroy();
-	if(m_pCDownloadListGenerator) m_pCDownloadListGenerator->Destroy();
-	if(m_pDExecuteStringCommand) m_pDExecuteStringCommand->Destroy();
-	if(m_pFindMatchingWeaponsForTeamLoadout) m_pFindMatchingWeaponsForTeamLoadout->Destroy();
-	
+	if (m_pLoggingSeverity) m_pLoggingSeverity->Destroy();
+	if (m_pCDownloadListGenerator) m_pCDownloadListGenerator->Destroy();
+	if (m_pDExecuteStringCommand) m_pDExecuteStringCommand->Destroy();
+	if (m_pFindMatchingWeaponsForTeamLoadout) m_pFindMatchingWeaponsForTeamLoadout->Destroy();
+
 	SH_REMOVE_HOOK(IVEngineServer, ClientPrintf, engine, SH_MEMBER(this, &CForwardManager::ClientPrint), false);
 	SH_REMOVE_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::OnClientConnect), false);
 	SH_REMOVE_HOOK(IServerGameDLL, GameFrame, gamedll, SH_MEMBER(this, &CForwardManager::OnGameFrame), false);
-	
+
 	forwards->ReleaseForward(m_pGiveNamedItem);
 	forwards->ReleaseForward(m_pGiveNamedItemPre);
 	forwards->ReleaseForward(m_pWeaponCanUse);
@@ -354,7 +355,7 @@ void CForwardManager::Shutdown()
 void CForwardManager::HookClient(int client)
 {
 	CBaseEntity *pEnt = gamehelpers->ReferenceToEntity(client);
-	if(pEnt)
+	if (pEnt)
 	{
 		m_iHookId[PTaH_GiveNamedItem][client] = SH_ADD_MANUALHOOK(GiveNamedItemHook, pEnt, SH_MEMBER(this, &CForwardManager::GiveNamedItem), true);
 		m_iHookId[PTaH_GiveNamedItemPre][client] = SH_ADD_MANUALHOOK(GiveNamedItemPreHook, pEnt, SH_MEMBER(this, &CForwardManager::GiveNamedItemPre), false);
@@ -366,27 +367,27 @@ void CForwardManager::HookClient(int client)
 
 void CForwardManager::UnhookClient(int client)
 {
-	if(m_iHookId[PTaH_GiveNamedItem][client] != 0)
+	if (m_iHookId[PTaH_GiveNamedItem][client] != 0)
 	{
 		SH_REMOVE_HOOK_ID(m_iHookId[PTaH_GiveNamedItem][client]);
 		m_iHookId[PTaH_GiveNamedItem][client] = 0;
 	}
-	if(m_iHookId[PTaH_GiveNamedItemPre][client] != 0)
+	if (m_iHookId[PTaH_GiveNamedItemPre][client] != 0)
 	{
 		SH_REMOVE_HOOK_ID(m_iHookId[PTaH_GiveNamedItemPre][client]);
 		m_iHookId[PTaH_GiveNamedItemPre][client] = 0;
 	}
-	if(m_iHookId[PTaH_WeaponCanUse][client] != 0)
+	if (m_iHookId[PTaH_WeaponCanUse][client] != 0)
 	{
 		SH_REMOVE_HOOK_ID(m_iHookId[PTaH_WeaponCanUse][client]);
 		m_iHookId[PTaH_WeaponCanUse][client] = 0;
 	}
-	if(m_iHookId[PTaH_SetPlayerModel][client] != 0)
+	if (m_iHookId[PTaH_SetPlayerModel][client] != 0)
 	{
 		SH_REMOVE_HOOK_ID(m_iHookId[PTaH_SetPlayerModel][client]);
 		m_iHookId[PTaH_SetPlayerModel][client] = 0;
 	}
-	if(m_iHookId[PTaH_SetPlayerModelPre][client] != 0)
+	if (m_iHookId[PTaH_SetPlayerModelPre][client] != 0)
 	{
 		SH_REMOVE_HOOK_ID(m_iHookId[PTaH_SetPlayerModelPre][client]);
 		m_iHookId[PTaH_SetPlayerModelPre][client] = 0;
@@ -395,18 +396,18 @@ void CForwardManager::UnhookClient(int client)
 
 CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin)
 {
-	if(m_pGiveNamedItem->GetFunctionCount() > 0)
+	if (m_pGiveNamedItem->GetFunctionCount() > 0)
 	{
 		CBaseEntity *pEnt = META_IFACEPTR(CBaseEntity);
-		
-		cell_t Origin[3] = {0, 0, 0};
-		if(pOrigin)
+
+		cell_t Origin[3] = { 0, 0, 0 };
+		if (pOrigin)
 		{
 			Origin[0] = sp_ftoc(pOrigin->x);
 			Origin[1] = sp_ftoc(pOrigin->y);
 			Origin[2] = sp_ftoc(pOrigin->z);
 		}
-		
+
 		m_pGiveNamedItem->PushCell(gamehelpers->EntityToBCompatRef(pEnt));
 		m_pGiveNamedItem->PushString(szItem);
 		m_pGiveNamedItem->PushCell((cell_t)pView);
@@ -420,22 +421,22 @@ CBaseEntity *CForwardManager::GiveNamedItem(const char *szItem, int iSubType, CE
 
 CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin)
 {
-	if(m_pGiveNamedItemPre->GetFunctionCount() > 0)
+	if (m_pGiveNamedItemPre->GetFunctionCount() > 0)
 	{
 		char szItemByf[64];
 		V_strncpy(szItemByf, szItem, sizeof(szItemByf));
 		cell_t pViewNew = ((cell_t)pView);
 		cell_t IgnoredCEconItemViewNew = false;
 		cell_t OriginIsNULL = pOrigin == NULL;
-		cell_t Origin[3] = {0, 0, 0};
-		if(pOrigin)
+		cell_t Origin[3] = { 0, 0, 0 };
+		if (pOrigin)
 		{
 			Origin[0] = sp_ftoc(pOrigin->x);
 			Origin[1] = sp_ftoc(pOrigin->y);
 			Origin[2] = sp_ftoc(pOrigin->z);
 		}
 		cell_t res = PLUGIN_CONTINUE;
-		
+
 		m_pGiveNamedItemPre->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
 		m_pGiveNamedItemPre->PushStringEx(szItemByf, sizeof(szItemByf), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pGiveNamedItemPre->PushCellByRef(&pViewNew);
@@ -443,25 +444,25 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 		m_pGiveNamedItemPre->PushCellByRef(&OriginIsNULL);
 		m_pGiveNamedItemPre->PushArray(Origin, 3, SM_PARAM_COPYBACK);
 		m_pGiveNamedItemPre->Execute(&res);
-		
-		if(res != Pl_Continue)
+
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed)
+			if (res == Pl_Changed)
 			{
-				if(IgnoredCEconItemViewNew)
+				if (IgnoredCEconItemViewNew)
 				{
 					g_pPTaHForwards.IgnoredCEconItemView = true;
 					pViewNew = 0;
 				}
-				
+
 				Vector OriginNew; OriginNew.Invalidate();
-				if(OriginIsNULL == false)
+				if (OriginIsNULL == false)
 				{
 					OriginNew.x = sp_ctof(Origin[0]);
 					OriginNew.y = sp_ctof(Origin[1]);
 					OriginNew.z = sp_ctof(Origin[2]);
 				}
-				
+
 				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, GiveNamedItemPreHook, (((const char *)szItemByf), iSubType, ((CEconItemView *)pViewNew), removeIfNotCarried, OriginNew.IsValid() ? &OriginNew : NULL));
 			}
 			else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
@@ -472,7 +473,7 @@ CBaseEntity *CForwardManager::GiveNamedItemPre(const char *szItem, int iSubType,
 
 bool CForwardManager::WeaponCanUse(CBaseCombatWeapon *pWeapon)
 {
-	if(m_pWeaponCanUse->GetFunctionCount() > 0)
+	if (m_pWeaponCanUse->GetFunctionCount() > 0)
 	{
 		cell_t res = META_RESULT_ORIG_RET(bool);
 		cell_t ret = res;
@@ -480,7 +481,7 @@ bool CForwardManager::WeaponCanUse(CBaseCombatWeapon *pWeapon)
 		m_pWeaponCanUse->PushCell(gamehelpers->EntityToBCompatRef(pWeapon));
 		m_pWeaponCanUse->PushCell(ret);
 		m_pWeaponCanUse->Execute(&res);
-		if(ret != res)
+		if (ret != res)
 		{
 			RETURN_META_VALUE(MRES_SUPERCEDE, (bool)res);
 		}
@@ -490,7 +491,7 @@ bool CForwardManager::WeaponCanUse(CBaseCombatWeapon *pWeapon)
 
 CBaseEntity *CForwardManager::SetModel(const char *sModel)
 {
-	if(m_pSetModel->GetFunctionCount() > 0)
+	if (m_pSetModel->GetFunctionCount() > 0)
 	{
 		m_pSetModel->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
 		m_pSetModel->PushString(sModel);
@@ -501,7 +502,7 @@ CBaseEntity *CForwardManager::SetModel(const char *sModel)
 
 CBaseEntity *CForwardManager::SetModelPre(const char *sModel)
 {
-	if(m_pSetModelPre->GetFunctionCount() > 0)
+	if (m_pSetModelPre->GetFunctionCount() > 0)
 	{
 		CBaseEntity *pEnt = META_IFACEPTR(CBaseEntity);
 		char sModelNew[128];
@@ -511,10 +512,10 @@ CBaseEntity *CForwardManager::SetModelPre(const char *sModel)
 		m_pSetModelPre->PushString(playerhelpers->GetGamePlayer(gamehelpers->EntityToBCompatRef(pEnt))->GetPlayerInfo()->GetModelName());
 		m_pSetModelPre->PushStringEx(sModelNew, sizeof(sModelNew), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pSetModelPre->Execute(&res);
-		
-		if(res != Pl_Continue)
+
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed) RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, SetModelPreHook, (((const char *)sModelNew)));
+			if (res == Pl_Changed) RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, NULL, SetModelPreHook, (((const char *)sModelNew)));
 			else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
 		}
 	}
@@ -523,18 +524,18 @@ CBaseEntity *CForwardManager::SetModelPre(const char *sModel)
 
 void CForwardManager::ClientPrint(edict_t *pEdict, const char *szMsg)
 {
-	if(m_pClientPrintf->GetFunctionCount() > 0)
+	if (m_pClientPrintf->GetFunctionCount() > 0)
 	{
 		char cMsg[1024];
 		V_strncpy(cMsg, szMsg, sizeof(cMsg));
 		cell_t res = PLUGIN_CONTINUE;
 		m_pClientPrintf->PushCell(gamehelpers->IndexOfEdict(pEdict));
-		m_pClientPrintf->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		m_pClientPrintf->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pClientPrintf->Execute(&res);
-		
-		if(res != Pl_Continue)
+
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed) RETURN_META_NEWPARAMS(MRES_IGNORED, &IVEngineServer::ClientPrintf, (pEdict, ((const char *)cMsg)));
+			if (res == Pl_Changed) RETURN_META_NEWPARAMS(MRES_IGNORED, &IVEngineServer::ClientPrintf, (pEdict, ((const char *)cMsg)));
 			else RETURN_META(MRES_SUPERCEDE);
 		}
 	}
@@ -569,31 +570,31 @@ static const char *ExtractPlayerName(CUtlVector<NetMsg_SplitPlayerConnect *> &pS
 
 IClient *CForwardManager::OnClientConnect(const netadr_t & address, int nProtocol, int iChallenge, int nAuthProtocol, const char *pchName, const char *pchPassword, const char *pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect *> &pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char *pUnknown, int iUnknown)
 {
-	if(nAuthProtocol == 3 && m_pOnClientConnect->GetFunctionCount() > 0)
+	if (nAuthProtocol == 3 && m_pOnClientConnect->GetFunctionCount() > 0)
 	{
 		cell_t res = PLUGIN_CONTINUE;
-		
+
 		char rejectReason[512];
 		char szSteamID[32];
 		char passwordBuffer[128];
 		char ipString[16];
-		
+
 		V_strncpy(passwordBuffer, pchPassword, sizeof(passwordBuffer));
 		V_snprintf(ipString, sizeof(ipString), "%u.%u.%u.%u", address.ip[0], address.ip[1], address.ip[2], address.ip[3]);
 		uint64 ullSteamID = *(uint64 *)pCookie;
 		CSteamID SteamID = CSteamID(ullSteamID);
-		V_snprintf(szSteamID, sizeof(szSteamID), "STEAM_1:%u:%u", (SteamID.GetAccountID() % 2) ? 1 : 0, (int32)(SteamID.GetAccountID()/2));
-		
+		V_snprintf(szSteamID, sizeof(szSteamID), "STEAM_1:%u:%u", (SteamID.GetAccountID() % 2) ? 1 : 0, (int32)(SteamID.GetAccountID() / 2));
+
 		m_pOnClientConnect->PushString(ExtractPlayerName(pSplitPlayerConnectVector));
 		m_pOnClientConnect->PushStringEx(passwordBuffer, sizeof(passwordBuffer), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pOnClientConnect->PushString(ipString);
 		m_pOnClientConnect->PushString(szSteamID);
 		m_pOnClientConnect->PushStringEx(rejectReason, sizeof(rejectReason), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		m_pOnClientConnect->Execute(&res);
-		
-		if(res != Pl_Continue)
+
+		if (res != Pl_Continue)
 		{
-			if(res == Pl_Changed)
+			if (res == Pl_Changed)
 			{
 				//Not work:( RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, OnClientConnect, (address, nProtocol, iChallenge, nAuthProtocol, pchName, ((const char *)passwordBuffer), pCookie, cbCookie, pSplitPlayerConnectVector, bUnknown, platform, pUnknown, iUnknown));
 				RETURN_META_VALUE(MRES_SUPERCEDE, SH_MCALL(iserver, ConnectClient)(address, nProtocol, iChallenge, nAuthProtocol, pchName, passwordBuffer, pCookie, cbCookie, pSplitPlayerConnectVector, bUnknown, platform, pUnknown, iUnknown));

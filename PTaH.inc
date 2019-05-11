@@ -4,13 +4,6 @@
 #define _PTaH_included
 
 
-#define AF_UNSPEC	0
-#define AF_INET	2
-#define AF_INET6	10
-
-#define INET_ADDRSTRLEN 16
-#define INET6_ADDRSTRLEN 46
-
 
 enum PTaH_HookType
 {
@@ -68,6 +61,18 @@ enum LoggingSeverity
 	//-----------------------------------------------------------------------------
 	LS_HIGHEST_SEVERITY = 4,
 };
+
+enum CEconItemDefinition
+{
+	CEconItemDefinition_NULL = 0
+};
+
+enum CEconItemView
+{
+	CEconItemView_NULL = 0
+};
+
+
 
 methodmap CEconItemDefinition
 {
@@ -210,7 +215,7 @@ methodmap CEconItemView
     { 
 		int AccountID = this.GetAccountID();
 		for (int i = 1; i <= MaxClients; i++) if(IsClientInGame(i) && AccountID == GetSteamAccountID(i)) return i;
-		return 0;
+		return -1;
     }
 	
 	/**
@@ -283,53 +288,6 @@ methodmap CEconItemView
 	public native int GetStatTrakKill();
 };
 
-methodmap AddrInfo
-{
-	//!!!!!!!!!!!!!!!!!!!!! AddrInfo is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	//!!!!!!!!!!!!!!!!!!!!! Always check, if not wounded AddrInfo - NULL ( if(AddrInfo) ) !!!!!!!!!!!!!!!!!!!!!
-	
-	/**
-	 *	Gets the version IP addresses (AF_INET или AF_INET6).
-	 *	-
-	 * @return	AF_INET или AF_INET6.
-	 *	-
-	 * @error AddrInfo == NULL.
-	*/
-	property int Family
-	{
-		public native get();
-	}
-	
-	/**
-	 *	It records the IP address in line.
-	 *	-
-	 * @noreturn
-	 *	-
-	 * @error AddrInfo == NULL.
-	*/
-	public native void GetIP(char[] sBuffer, int len);
-	
-	/**
-	 *	Gets AddrInfo next IP.
-	 *	-
-	 * @return	AddrInfo.
-	 *	-
-	 * @error AddrInfo == NULL.
-	*/
-	property AddrInfo NextIP
-	{
-		public native get();
-	}
-	
-	/**
-	 *	Clears the selected for AddrInfo memory (!!! only need to clean the main AddrInfo, AddrInfo received from NextIP You do not need to clean it !!!).
-	 *	-
-	 * @noreturn
-	 *	-
-	 * @error AddrInfo == NULL.
-	*/
-	public native void ClearMem();
-};
 
 
 typeset PTaHCB
@@ -459,6 +417,8 @@ typeset PTaHCB
 	function Action (const char[] sMessage, LoggingSeverity severity, bool bBlockable);
 };
 
+
+
 /**
  *	PTaH Version.
  * @param sBuffer				The string will be written version (only need to specify if you want to get the version as a string).
@@ -527,39 +487,9 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
  *	-
  * @error invalid iClient.
 */
-native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = view_as<CEconItemView>(0), const float Origin[3] = NULL_VECTOR);
+native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = CEconItemView_NULL, const float Origin[3] = NULL_VECTOR);
 
-/**
- *	gets md5 hash file.
- * @param sFile					The path to the file.
- * @param sBuffer				The string will be recorded hash.
- * @param len					Length of the line.
- *	-
- * @return	Return true if successful.
- *	-
- * @error sFile does not exist.
-*/
-native bool PTaH_MD5File(const char[] sFile, char[] sBuffer, int len);
 
-/**
- *	Gets AddrInfo on hostname.
- * @param sHostName				Hostname.
- * @param family				Generation IP (AF_INET | AF_INET6 | AF_UNSPEC).
- * @param addr					The variable which will be recorded AddrInfo If successful.
- *	-
- * @return	Index error (if there is).
-*/
-native int PTaH_GetAddrInfo(const char[] sHostName, int family, AddrInfo &addr);
-
-/**
- *	Gets an error in its index.
- * @param error					Index error.
- * @param sBuffer				Line where the error will be recorded.
- * @param len					Length sBuffer.
- *	-
- * @return	Amount written characters.
-*/
-native int PTaH_Gai_StrError(int error, char[] sBuffer, int len);
 
 public Extension __ext_PTaH = 
 {
@@ -605,12 +535,5 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
-	MarkNativeAsOptional("PTaH_MD5File");
-	MarkNativeAsOptional("PTaH_GetAddrInfo");
-	MarkNativeAsOptional("PTaH_Gai_StrError");
-	MarkNativeAsOptional("AddrInfo.Family.get");
-	MarkNativeAsOptional("AddrInfo.GetIP");
-	MarkNativeAsOptional("AddrInfo.NextIP.get");
-	MarkNativeAsOptional("AddrInfo.ClearMem");
 }
 #endif

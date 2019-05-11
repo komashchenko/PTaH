@@ -32,7 +32,7 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
-/**
+ /**
  * @file extension.h
  * @brief Sample extension code header.
  */
@@ -43,8 +43,8 @@
 #else
 #define VCallingConvention __cdecl
 #endif
- 
- 
+
+
 #include "smsdk_ext.h"
 #include <ISDKTools.h>
 #include "CDetour/detours.h"
