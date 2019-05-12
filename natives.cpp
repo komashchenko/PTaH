@@ -90,7 +90,9 @@ static cell_t PTaH_GetItemDefinitionByName(IPluginContext* pContext, const cell_
 		return reinterpret_cast<cell_t>(g_pCEconItemSchema->GetItemDefinitionByName(strSource));
 	}
 
-	return pContext->ThrowNativeError("g_pCEconItemSchema == nullptr");
+	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+	return 0;
 }
 
 static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const cell_t* params)
@@ -102,7 +104,9 @@ static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const c
 		return reinterpret_cast<cell_t>(pItemDefinition);
 	}
 
-	return pContext->ThrowNativeError("g_pCEconItemSchema == nullptr");
+	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+	return 0;
 }
 
 static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
@@ -384,6 +388,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
 	if (pItemDefinition)
 	{
 		return pItemDefinition->GetDefinitionIndex();
@@ -395,6 +400,7 @@ static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* pa
 static cell_t PTaH_GetLoadoutSlot(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
 	if (pItemDefinition)
 	{
 		return pItemDefinition->GetLoadoutSlot(params[2]);
@@ -406,6 +412,7 @@ static cell_t PTaH_GetLoadoutSlot(IPluginContext* pContext, const cell_t* params
 static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const cell_t *params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
 	if (pItemDefinition)
 	{
 		return pItemDefinition->GetNumSupportedStickerSlots();
@@ -417,6 +424,7 @@ static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const c
 static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
 	if (pItemDefinition)
 	{
 		size_t numBytes;
@@ -433,6 +441,7 @@ static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetCustomPaintKitIndex();
@@ -444,6 +453,7 @@ static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext* pContext, const cell_t
 static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetCustomPaintKitSeed();
@@ -455,6 +465,7 @@ static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext* pContext, const cell_t*
 static cell_t PTaH_GetCustomPaintKitWear(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return sp_ftoc(pItemView->GetCustomPaintKitWear(sp_ctof(params[2])));
@@ -466,9 +477,11 @@ static cell_t PTaH_GetCustomPaintKitWear(IPluginContext* pContext, const cell_t*
 static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		EStickerAttributeType StickerAttributeType = static_cast<EStickerAttributeType>(params[3]);
+
 		if (StickerAttributeType == StickerID)
 		{
 			return pItemView->GetStickerAttributeBySlotIndexInt(params[2], StickerAttributeType, params[4]);
@@ -485,6 +498,7 @@ static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext* pContext, cons
 static cell_t PTaH_IsTradable(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->IsTradable();
@@ -496,6 +510,7 @@ static cell_t PTaH_IsTradable(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_IsMarketable(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->IsMarketable();
@@ -507,6 +522,7 @@ static cell_t PTaH_IsMarketable(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetItemDefinition(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return reinterpret_cast<cell_t>(pItemView->GetItemDefinition());
@@ -518,6 +534,7 @@ static cell_t PTaH_GetItemDefinition(IPluginContext* pContext, const cell_t* par
 static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetAccountID();
@@ -529,6 +546,7 @@ static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetQuality(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetQuality();
@@ -540,6 +558,7 @@ static cell_t PTaH_GetQuality(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetRarity(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetRarity();
@@ -551,6 +570,7 @@ static cell_t PTaH_GetRarity(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetFlags(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetFlags();
@@ -562,6 +582,7 @@ static cell_t PTaH_GetFlags(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetOrigin();
@@ -573,6 +594,7 @@ static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		return pItemView->GetKillEaterValue();
@@ -584,6 +606,7 @@ static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
 static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
 	if (pItemView)
 	{
 		size_t numBytes;

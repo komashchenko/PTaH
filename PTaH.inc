@@ -536,12 +536,15 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
+	MarkNativeAsOptional("PTaH_GetItemInLoadout");
+	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
+	MarkNativeAsOptional("PTaH_GivePlayerItem");
+	MarkNativeAsOptional("PTaH_ForceFullUpdate");
+	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
 	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
-	MarkNativeAsOptional("PTaH_GetItemInLoadout");
-	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitSeed");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitWear");
@@ -556,6 +559,5 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetOrigin");
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
-	MarkNativeAsOptional("PTaH_GivePlayerItem");
 }
 #endif
