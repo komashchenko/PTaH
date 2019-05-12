@@ -272,6 +272,38 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 	return gamehelpers->EntityToBCompatRef(pItem);
 }
 
+static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* params)
+{
+	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+	if (gamehelpers->ReferenceToEntity(params[1]) == nullptr)
+	{
+		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
+	}
+
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("UpdateAcknowledgedFramecount", &offset) || offset == -1)
+		{
+			smutils->LogError(myself, "Failed to get UpdateAcknowledgedFramecount offset.");
+
+			return 0;
+		}
+	}
+
+	IClient* pClient = iserver->GetClient(params[1] - 1);
+	// The IClient vtable is + sizeof(void*) from the CBaseClient vtable due to multiple inheritance.
+	void* pGameClient = (void*)((intptr_t)pClient - sizeof(void*));
+
+	((bool(VCallingConvention*)(void*, int))(*(void***)pGameClient)[offset])(pGameClient, -1);
+
+	return 0;
+}
+
 static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
@@ -498,6 +530,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadout },
 	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromWeapon },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
+	{ "PTaH_ForceFullUpdate",								PTaH_ForceFullUpdate },
 	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },

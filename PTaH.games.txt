@@ -151,6 +151,11 @@
 				"windows"		"25"
 				"linux"			"26"
 			}
+			"UpdateAcknowledgedFramecount"
+			{
+				"windows"		"17"
+				"linux"			"55"
+			}
 		}
 	}
 }

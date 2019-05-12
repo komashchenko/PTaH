@@ -489,6 +489,15 @@ native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEnt);
 */
 native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemView Item = CEconItemView_NULL, const float Origin[3] = NULL_VECTOR);
 
+/**
+ *	Sends to Player a full update packet.
+ * @param iClient				Index Player.
+ *	-
+ * @noreturn
+ *	-
+ * @error invalid iClient.
+*/
+native void PTaH_ForceFullUpdate(int iClient);
 
 
 public Extension __ext_PTaH = 
