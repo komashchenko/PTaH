@@ -304,6 +304,83 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 	return 0;
 }
 
+static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t* params)
+{
+	if (!g_pCEconItemSchema)
+	{
+		smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+		return -1;
+	}
+	
+	CEconItemDefinition* pItemDefinition = g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
+
+	if (!pItemDefinition)
+	{
+		return pContext->ThrowNativeError("Defenition index %d is invalid", params[1]);
+	}
+	else
+	{
+		const char* sBuf = pItemDefinition->GetClassName();
+
+		//weapon_* or item_*
+		if (!((sBuf[0] == 'w' && sBuf[6] == '_') || (sBuf[0] == 'i' && sBuf[4] == '_')))
+		{
+			return pContext->ThrowNativeError("Defenition index %d is not weapon_* or item_*", params[1]);
+		}
+	}
+
+	cell_t* source_origin; pContext->LocalToPhysAddr(params[2], &source_origin);
+	
+	if (source_origin == pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		return pContext->ThrowNativeError("Origin cannot be NULL_VECTOR");
+	}
+	
+	cell_t* source_angles; pContext->LocalToPhysAddr(params[3], &source_angles);
+	
+	if (source_angles == pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		return pContext->ThrowNativeError("Angles cannot be NULL_VECTOR");
+	}
+
+	Vector Origin;
+	Origin.x = sp_ctof(source_origin[0]);
+	Origin.y = sp_ctof(source_origin[1]);
+	Origin.z = sp_ctof(source_origin[2]);
+
+	QAngle Angles;
+	Angles.x = sp_ctof(source_angles[0]);
+	Angles.y = sp_ctof(source_angles[1]);
+	Angles.z = sp_ctof(source_angles[2]);
+
+#ifdef WIN32
+	static CBaseEntity* (__stdcall* SpawnItem)(uint16_t, Vector*, QAngle*, int, int, int) = nullptr;
+#else
+	static CBaseEntity* (__cdecl* SpawnItem)(void*, uint16_t, Vector*, QAngle*, int, int, int) = nullptr;
+#endif
+
+	if (SpawnItem == nullptr)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", (void**)&SpawnItem) || !SpawnItem)
+		{
+			smutils->LogError(myself, "Failed to get SpawnItem function.");
+
+			return -1;
+		}
+	}
+
+	CBaseEntity* pItem;
+
+#ifdef WIN32
+	pItem = SpawnItem(params[1], &Origin, &Angles, 1, 4, 0);
+#else
+	pItem = SpawnItem(nullptr, params[1], &Origin, &Angles, 1, 4, 0);
+#endif
+
+	return gamehelpers->EntityToBCompatRef(pItem);
+}
+
 static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
@@ -531,6 +608,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromWeapon },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
 	{ "PTaH_ForceFullUpdate",								PTaH_ForceFullUpdate },
+	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
 	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },

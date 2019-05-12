@@ -448,11 +448,11 @@ native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassName)
 
 /**
  *	Gets CEconItemDefinition from DefinitionIndex.
- * @param DefIndex					DefinitionIndex weapons.
+ * @param iDefIndex					DefinitionIndex weapons.
  *	-
  * @return	Returns CEconItemDefinition.
 */
-native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int DefIndex);
+native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int iDefIndex);
 
 /**
  *	Gets CEconItemView weapons client.
@@ -498,6 +498,19 @@ native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemVi
  * @error invalid iClient.
 */
 native void PTaH_ForceFullUpdate(int iClient);
+
+/**
+ *  Spawn item by a definition index at the coordionates.
+ * @param iDefIndex			The definition index (allowed only weapon_* and item_*).
+ * @param Origin				Coordinates the item will be created at.
+ * @param Angles				Angles the item will be created at.
+ * -
+ * @return Return index item.
+ * -
+ * @error NULL_VECTOR in Origin or Angles arguments, iDefIndex invalid.
+*/
+native int PTaH_SpawnItemFromDefIndex(int iDefIndex, const float Origin[3], const float Angles[3] = {0.0, 0.0, 0.0});
+
 
 
 public Extension __ext_PTaH = 
