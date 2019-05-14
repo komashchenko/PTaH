@@ -8,7 +8,13 @@ sourceFiles = [
   'extension.cpp',
   'forwards.cpp',
   'natives.cpp',
-  'classes.cpp'
+  'classes.cpp',
+  '../public/libudis86/decode.c',
+  '../public/libudis86/udis86.c',
+  '../public/libudis86/itab.c',
+  '../public/libudis86/syn-att.c',
+  '../public/libudis86/syn-intel.c',
+  '../public/libudis86/syn.c'
 ]
 
 ###############
