@@ -511,6 +511,26 @@ native void PTaH_ForceFullUpdate(int iClient);
 */
 native int PTaH_SpawnItemFromDefIndex(int iDefIndex, const float Origin[3], const float Angles[3] = {0.0, 0.0, 0.0});
 
+/**
+ *  Emulate bullet shot on the server and does the damage calculations.
+ * @param iClient				The Player Index.
+ * @param Item					Customization item.
+ * @param Origin				Coordinates the bullet will be created at.
+ * @param Angles				Angles the bullet will be created at.
+ * @param iMode					Mode index.
+ * @param iSeed					Randomizing seed.
+ * @param fInaccuracy			Inaccuracy variable.
+ * @param fSpread				Spread variable.
+ * @param fFishtail				Accuracy Fishtail.
+ * @param iSoundType			Sound type. (1 or 12 for silenced, 0 for none sound)
+ * @param fRecoilIndex			Recoil variable.
+ *	-
+ * @noreturn
+ *	-
+ * @error invalid iClient, NULL_VECTOR in Origin or Angles arguments, CEconItemView == NULL.
+*/
+native void PTaH_FX_FireBullets(int iClient, CEconItemView Item, const float Origin[3], const float Angles[3], int iMode, int iSeed, float fInaccuracy, float fSpread, float fFishtail, int iSoundType, float fRecoilIndex);
+
 
 
 public Extension __ext_PTaH = 
@@ -541,6 +561,7 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
 	MarkNativeAsOptional("PTaH_ForceFullUpdate");
 	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
+	MarkNativeAsOptional("PTaH_FX_FireBullets");
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");

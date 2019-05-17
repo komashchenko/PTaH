@@ -385,6 +385,87 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 	return gamehelpers->EntityToBCompatRef(pItem);
 }
 
+static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params)
+{
+	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+
+	CBaseEntity* pEntity;
+
+	if ((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
+	{
+		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
+	}
+
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[2]);
+
+	if (!pItemView)
+	{
+		return pContext->ThrowNativeError("CEconItemView == NULL");
+	}
+
+	cell_t* source_origin; pContext->LocalToPhysAddr(params[3], &source_origin);
+
+	if (source_origin == pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		return pContext->ThrowNativeError("Origin cannot be NULL_VECTOR");
+	}
+
+	cell_t* source_angles; pContext->LocalToPhysAddr(params[4], &source_angles);
+
+	if (source_angles == pContext->GetNullRef(SP_NULL_VECTOR))
+	{
+		return pContext->ThrowNativeError("Angles cannot be NULL_VECTOR");
+	}
+
+	Vector Origin;
+	Origin.x = sp_ctof(source_origin[0]);
+	Origin.y = sp_ctof(source_origin[1]);
+	Origin.z = sp_ctof(source_origin[2]);
+
+	QAngle Angles;
+	Angles.x = sp_ctof(source_angles[0]);
+	Angles.y = sp_ctof(source_angles[1]);
+	Angles.z = sp_ctof(source_angles[2]);
+
+#ifdef WIN32
+	//Something is wrong here
+	static void (__fastcall* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
+#else
+	static void (__cdecl* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
+#endif
+
+	if (FX_FireBullets == nullptr)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets) || !FX_FireBullets)
+		{
+			smutils->LogError(myself, "Failed to get FX_FireBullets function.");
+
+			return 0;
+		}
+	}
+
+	static unsigned int m_bLagCompensationOffset = 0;
+	if (m_bLagCompensationOffset == 0)
+	{
+		sm_datatable_info_t info;
+		gamehelpers->FindDataMapInfo(gamehelpers->GetDataMap(pEntity), "m_bLagCompensation", &info);
+		m_bLagCompensationOffset = info.actual_offset;
+	}
+
+	bool* bLagCompensation = (bool*)((intptr_t)pEntity + m_bLagCompensationOffset);
+	bool bSave = *bLagCompensation;
+	*bLagCompensation = false;
+
+	FX_FireBullets(params[1], nullptr, pItemView, &Origin, &Angles, params[5], params[6], sp_ctof(params[7]), sp_ctof(params[8]), sp_ctof(params[9]), 0.f, params[10], sp_ctof(params[11]));
+
+	*bLagCompensation = bSave;
+
+	return 0;
+}
+
 static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
@@ -632,6 +713,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
 	{ "PTaH_ForceFullUpdate",								PTaH_ForceFullUpdate },
 	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
+	{ "PTaH_FX_FireBullets",								PTaH_FX_FireBullets },
 	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },
