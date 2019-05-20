@@ -431,7 +431,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	Angles.z = sp_ctof(source_angles[2]);
 
 #ifdef WIN32
-	//Something is wrong here
+	//Very similar to __fastcall, but does not clean stack.
 	static void (__fastcall* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
 #else
 	static void (__cdecl* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
@@ -460,6 +460,10 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	*bLagCompensation = false;
 
 	FX_FireBullets(params[1], nullptr, pItemView, &Origin, &Angles, params[5], params[6], sp_ctof(params[7]), sp_ctof(params[8]), sp_ctof(params[9]), 0.f, params[10], sp_ctof(params[11]));
+#ifdef WIN32
+	//Clearing stack after call.
+	__asm add esp, 2Ch
+#endif
 
 	*bLagCompensation = bSave;
 
