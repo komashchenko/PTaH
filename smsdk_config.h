@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2004-2016 AlliedModders LLC.  All rights reserved.
+ * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -16,17 +16,6 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
  */
 
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_CONFIG_H_
@@ -65,14 +54,14 @@
 #define SMEXT_ENABLE_PLAYERHELPERS
 //#define SMEXT_ENABLE_DBMANAGER
 #define SMEXT_ENABLE_GAMECONF
-#define SMEXT_ENABLE_MEMUTILS
+//#define SMEXT_ENABLE_MEMUTILS
 #define SMEXT_ENABLE_GAMEHELPERS
 //#define SMEXT_ENABLE_TIMERSYS
 //#define SMEXT_ENABLE_THREADER
-#define SMEXT_ENABLE_LIBSYS
+//#define SMEXT_ENABLE_LIBSYS
 //#define SMEXT_ENABLE_MENUS
 //#define SMEXT_ENABLE_ADTFACTORY
-//#define SMEXT_ENABLE_PLUGINSYS
+#define SMEXT_ENABLE_PLUGINSYS
 //#define SMEXT_ENABLE_ADMINSYS
 //#define SMEXT_ENABLE_TEXTPARSERS
 //#define SMEXT_ENABLE_USERMSGS

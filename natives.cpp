@@ -1,8 +1,8 @@
-/**
+﻿/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2004-2016 AlliedModders LLC.  All rights reserved.
+ * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -16,24 +16,12 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
  */
 
 #include "extension.h"
 #include "natives.h"
 #include "forwards.h"
 #include "classes.h"
-#include "server_class.h"
 
 
 static cell_t PTaH_Version(IPluginContext* pContext, const cell_t* params)
@@ -45,40 +33,18 @@ static cell_t PTaH_Version(IPluginContext* pContext, const cell_t* params)
 
 static cell_t PTaH_(IPluginContext* pContext, const cell_t* params)
 {
-	if (params[2] == 0)
+	IPluginFunction* pFunction = pContext->GetFunctionById(static_cast<funcid_t>(params[3]));
+
+	if (pFunction)
 	{
-		switch (params[1])
+		if (params[1] >= PTaH_GiveNamedItemPre && PTaH_MAXHOOKS > params[1])
 		{
-			case PTaH_GiveNamedItem: return g_pPTaHForwards.m_pGiveNamedItem->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_GiveNamedItemPre: return g_pPTaHForwards.m_pGiveNamedItemPre->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_WeaponCanUse: return g_pPTaHForwards.m_pWeaponCanUse->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_SetPlayerModel: return g_pPTaHForwards.m_pSetModel->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_SetPlayerModelPre: return g_pPTaHForwards.m_pSetModelPre->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_ConsolePrint: return g_pPTaHForwards.m_pClientPrintf->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_MapContentList: return g_pPTaHForwards.m_pMapContentList->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_OnClientConnect: return g_pPTaHForwards.m_pOnClientConnect->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_ExecuteStringCommand: return g_pPTaHForwards.m_pExecuteStringCommand->AddFunction(pContext, static_cast<funcid_t>(params[3]));
-			case PTaH_ServerConsolePrint: return g_pPTaHForwards.m_pServerConsolePrint->AddFunction(pContext, static_cast<funcid_t>(params[3]));
+			return g_ForwardManager.FunctionUpdateHook(static_cast<PTaH_HookEvent>(params[1]), pFunction, !static_cast<bool>(params[2]));
 		}
-	}
-	else
-	{
-		switch (params[1])
-		{
-			case PTaH_GiveNamedItem: return g_pPTaHForwards.m_pGiveNamedItem->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_GiveNamedItemPre: return g_pPTaHForwards.m_pGiveNamedItemPre->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_WeaponCanUse: return g_pPTaHForwards.m_pWeaponCanUse->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_SetPlayerModel: return g_pPTaHForwards.m_pSetModel->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_SetPlayerModelPre: return g_pPTaHForwards.m_pSetModelPre->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_ConsolePrint: return g_pPTaHForwards.m_pClientPrintf->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_MapContentList: return g_pPTaHForwards.m_pMapContentList->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_OnClientConnect: return g_pPTaHForwards.m_pOnClientConnect->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_ExecuteStringCommand: return g_pPTaHForwards.m_pExecuteStringCommand->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-			case PTaH_ServerConsolePrint: return g_pPTaHForwards.m_pServerConsolePrint->RemoveFunction(pContext->GetFunctionById(static_cast<funcid_t>(params[3])));
-		}
+		else return pContext->ThrowNativeError("Invalid event PTaH_HookType specified");
 	}
 
-	return false;
+	return pContext->ThrowNativeError("Invalid funcid");
 }
 
 static cell_t PTaH_GetItemDefinitionByName(IPluginContext* pContext, const cell_t* params)
@@ -111,27 +77,23 @@ static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const c
 
 static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
 {
-	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
+
+	if (!pPlayer)
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
 
-	CBaseEntity* pEntity;
-
-	if ((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
+	if (!pPlayer->IsInGame())
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
-	}
-	if (params[2] != 2 && params[2] != 3)
-	{
-		return pContext->ThrowNativeError("Team index %d is invalid", params[2]);
 	}
 
 	static int iGetItemInLoadoutOffset = -1, iInventoryOffset = -1;
 
 	if (iGetItemInLoadoutOffset == -1 || iInventoryOffset == -1)
 	{
-		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &iGetItemInLoadoutOffset) || iGetItemInLoadoutOffset == -1)
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &iGetItemInLoadoutOffset))
 		{
 			smutils->LogError(myself, "Failed to get GetItemInLoadout offset.");
 
@@ -140,14 +102,14 @@ static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* para
 
 		void* addr = nullptr;
 
-		if (!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &iInventoryOffset) || iInventoryOffset == -1)
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &iInventoryOffset))
 		{
 			smutils->LogError(myself, "Failed to get CCSPlayerInventoryOffset offset.");
 
 			return 0;
 		}
 
-		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr) || !addr)
+		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr))
 		{
 			smutils->LogError(myself, "Failed to get HandleCommand_Buy_Internal address.");
 
@@ -157,9 +119,11 @@ static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* para
 		iInventoryOffset = *(int*)((intptr_t)addr + iInventoryOffset);
 	}
 
+	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
+
 	void* pCCSPlayerInventory = (void*)((intptr_t)pEntity + iInventoryOffset);
 
-	CEconItemView* pItemView = ((CEconItemView*(VCallingConvention*)(void*, int, int))(*(void***)pCCSPlayerInventory)[iGetItemInLoadoutOffset])
+	CEconItemView* pItemView = ((CEconItemView * (VCallingConvention*)(void*, int, int))(*(void***)pCCSPlayerInventory)[iGetItemInLoadoutOffset])
 		(pCCSPlayerInventory, params[2], params[3]);
 
 	return reinterpret_cast<cell_t>(pItemView);
@@ -180,7 +144,7 @@ bool UTIL_ContainsDataTable(SendTable* pTable, const char* name)
 	{
 		prop = pTable->GetProp(i);
 
-		if ((table = prop->GetDataTable()) != NULL)
+		if ((table = prop->GetDataTable()) != nullptr)
 		{
 			pname = table->GetName();
 			if (pname && strcmp(name, pname) == 0)
@@ -208,7 +172,7 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cel
 		return pContext->ThrowNativeError("Entity %d is invalid", params[1]);
 	}
 
-	IServerNetworkable* pNet = ((IServerUnknown*)pEntity)->GetNetworkable();
+	IServerNetworkable* pNet = reinterpret_cast<IServerUnknown*>(pEntity)->GetNetworkable();
 
 	if (!pNet || !UTIL_ContainsDataTable(pNet->GetServerClass()->m_pTable, "DT_BaseCombatWeapon"))
 	{
@@ -224,19 +188,19 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cel
 		offset = info.actual_offset;
 	}
 
-	return (intptr_t)pEntity + offset;
+	return reinterpret_cast<cell_t>(pEntity) + offset;
 }
 
 static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params)
 {
-	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
+
+	if (!pPlayer)
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
 
-	CBaseEntity* pEntity;
-
-	if ((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
+	if (!pPlayer->IsInGame())
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
@@ -260,13 +224,15 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 
 	if (iGiveNamedItemOffset == -1)
 	{
-		if (!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &iGiveNamedItemOffset) || iGiveNamedItemOffset == -1)
+		if (!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &iGiveNamedItemOffset))
 		{
 			smutils->LogError(myself, "Failed to get GiveNamedItem offset.");
 
 			return -1;
 		}
 	}
+
+	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
 
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[3]);
 
@@ -278,11 +244,14 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 
 static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* params)
 {
-	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
+
+	if (!pPlayer)
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
-	if (gamehelpers->ReferenceToEntity(params[1]) == nullptr)
+
+	if (!pPlayer->IsInGame())
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
@@ -291,7 +260,7 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("UpdateAcknowledgedFramecount", &offset) || offset == -1)
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("UpdateAcknowledgedFramecount", &offset))
 		{
 			smutils->LogError(myself, "Failed to get UpdateAcknowledgedFramecount offset.");
 
@@ -300,8 +269,7 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 	}
 
 	IClient* pClient = iserver->GetClient(params[1] - 1);
-	// The IClient vtable is + sizeof(void*) from the CBaseClient vtable due to multiple inheritance.
-	void* pGameClient = (void*)((intptr_t)pClient - sizeof(void*));
+	CGameClient* pGameClient = IClientToGameClient(pClient);
 
 	((bool(VCallingConvention*)(void*, int))(*(void***)pGameClient)[offset])(pGameClient, -1);
 
@@ -316,7 +284,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 
 		return -1;
 	}
-	
+
 	CEconItemDefinition* pItemDefinition = g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
 
 	if (!pItemDefinition)
@@ -335,14 +303,14 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 	}
 
 	cell_t* source_origin; pContext->LocalToPhysAddr(params[2], &source_origin);
-	
+
 	if (source_origin == pContext->GetNullRef(SP_NULL_VECTOR))
 	{
 		return pContext->ThrowNativeError("Origin cannot be NULL_VECTOR");
 	}
-	
+
 	cell_t* source_angles; pContext->LocalToPhysAddr(params[3], &source_angles);
-	
+
 	if (source_angles == pContext->GetNullRef(SP_NULL_VECTOR))
 	{
 		return pContext->ThrowNativeError("Angles cannot be NULL_VECTOR");
@@ -366,7 +334,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 
 	if (SpawnItem == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", (void**)&SpawnItem) || !SpawnItem)
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("SpawnItem", (void**)&SpawnItem))
 		{
 			smutils->LogError(myself, "Failed to get SpawnItem function.");
 
@@ -387,14 +355,14 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 
 static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params)
 {
-	if ((params[1] < 1) || (params[1] > playerhelpers->GetMaxClients()))
+	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
+
+	if (!pPlayer)
 	{
 		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
 	}
 
-	CBaseEntity* pEntity;
-
-	if ((pEntity = gamehelpers->ReferenceToEntity(params[1])) == nullptr)
+	if (!pPlayer->IsInGame())
 	{
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
@@ -403,7 +371,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 
 	if (!pItemView)
 	{
-		return pContext->ThrowNativeError("CEconItemView == NULL");
+		return pContext->ThrowNativeError("CEconItemView == nullptr");
 	}
 
 	cell_t* source_origin; pContext->LocalToPhysAddr(params[3], &source_origin);
@@ -439,13 +407,15 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 
 	if (FX_FireBullets == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets) || !FX_FireBullets)
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets))
 		{
 			smutils->LogError(myself, "Failed to get FX_FireBullets function.");
 
 			return 0;
 		}
 	}
+
+	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
 
 	static unsigned int m_bLagCompensationOffset = 0;
 	if (m_bLagCompensationOffset == 0)
@@ -479,7 +449,7 @@ static cell_t PTaH_GetDefinitionIndex(IPluginContext* pContext, const cell_t* pa
 		return pItemDefinition->GetDefinitionIndex();
 	}
 
-	return pContext->ThrowNativeError("CEconItemDefinition == NULL");
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
 static cell_t PTaH_GetLoadoutSlot(IPluginContext* pContext, const cell_t* params)
@@ -491,10 +461,10 @@ static cell_t PTaH_GetLoadoutSlot(IPluginContext* pContext, const cell_t* params
 		return pItemDefinition->GetLoadoutSlot(params[2]);
 	}
 
-	return pContext->ThrowNativeError("CEconItemDefinition == NULL");
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
-static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const cell_t *params)
+static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
 
@@ -503,7 +473,7 @@ static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const c
 		return pItemDefinition->GetNumSupportedStickerSlots();
 	}
 
-	return pContext->ThrowNativeError("CEconItemDefinition == NULL");
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
 static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
@@ -514,13 +484,13 @@ static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
 	{
 		size_t numBytes;
 		const char* sBuf = pItemDefinition->GetClassName();
-		
+
 		pContext->StringToLocalUTF8(params[2], params[3], sBuf ? sBuf : "", &numBytes);
-		
+
 		return numBytes;
 	}
 
-	return pContext->ThrowNativeError("CEconItemDefinition == NULL");
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
 static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext* pContext, const cell_t* params)
@@ -532,7 +502,7 @@ static cell_t PTaH_GetCustomPaintKitIndex(IPluginContext* pContext, const cell_t
 		return pItemView->GetCustomPaintKitIndex();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext* pContext, const cell_t* params)
@@ -544,7 +514,7 @@ static cell_t PTaH_GetCustomPaintKitSeed(IPluginContext* pContext, const cell_t*
 		return pItemView->GetCustomPaintKitSeed();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetCustomPaintKitWear(IPluginContext* pContext, const cell_t* params)
@@ -556,7 +526,7 @@ static cell_t PTaH_GetCustomPaintKitWear(IPluginContext* pContext, const cell_t*
 		return sp_ftoc(pItemView->GetCustomPaintKitWear(sp_ctof(params[2])));
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext* pContext, const cell_t* params)
@@ -577,7 +547,7 @@ static cell_t PTaH_GetStickerAttributeBySlotIndex(IPluginContext* pContext, cons
 		}
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_IsTradable(IPluginContext* pContext, const cell_t* params)
@@ -589,7 +559,7 @@ static cell_t PTaH_IsTradable(IPluginContext* pContext, const cell_t* params)
 		return pItemView->IsTradable();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_IsMarketable(IPluginContext* pContext, const cell_t* params)
@@ -601,7 +571,7 @@ static cell_t PTaH_IsMarketable(IPluginContext* pContext, const cell_t* params)
 		return pItemView->IsMarketable();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetItemDefinition(IPluginContext* pContext, const cell_t* params)
@@ -613,7 +583,7 @@ static cell_t PTaH_GetItemDefinition(IPluginContext* pContext, const cell_t* par
 		return reinterpret_cast<cell_t>(pItemView->GetItemDefinition());
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
@@ -625,7 +595,7 @@ static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetAccountID();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetQuality(IPluginContext* pContext, const cell_t* params)
@@ -637,7 +607,7 @@ static cell_t PTaH_GetQuality(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetQuality();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetRarity(IPluginContext* pContext, const cell_t* params)
@@ -649,7 +619,7 @@ static cell_t PTaH_GetRarity(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetRarity();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetFlags(IPluginContext* pContext, const cell_t* params)
@@ -661,7 +631,7 @@ static cell_t PTaH_GetFlags(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetFlags();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
@@ -673,7 +643,7 @@ static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetOrigin();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
@@ -685,7 +655,7 @@ static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
 		return pItemView->GetKillEaterValue();
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
@@ -702,7 +672,7 @@ static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
 		return numBytes;
 	}
 
-	return pContext->ThrowNativeError("CEconItemView == NULL");
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
 
@@ -736,5 +706,5 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetOrigin",							PTaH_GetOrigin },
 	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
 	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEater },
-	{ NULL,													NULL }
+	{ nullptr,												nullptr }
 };

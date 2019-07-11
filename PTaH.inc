@@ -11,18 +11,22 @@ enum PTaH_HookType
 	UnHook
 };
 
-enum PTaH_Hook
+enum PTaH_HookEvent
 {
-	PTaH_GiveNamedItem = 0,
-	PTaH_GiveNamedItemPre,
-	PTaH_WeaponCanUse,
-	PTaH_SetPlayerModel,
+	PTaH_GiveNamedItemPre = 10,
+	PTaH_GiveNamedItemPost,
+	PTaH_WeaponCanUsePre,
+	PTaH_WeaponCanUsePost,
 	PTaH_SetPlayerModelPre,
-	PTaH_ConsolePrint,
-	PTaH_MapContentList,
-	PTaH_OnClientConnect,
-	PTaH_ExecuteStringCommand,
-	PTaH_ServerConsolePrint
+	PTaH_SetPlayerModelPost,
+	PTaH_ClientVoiceToPre,
+	PTaH_ClientVoiceToPost,
+	PTaH_ConsolePrintPre,
+	PTaH_ConsolePrintPost,
+	PTaH_ExecuteStringCommandPre,
+	PTaH_ExecuteStringCommandPost,
+	PTaH_ClientConnectPre,
+	PTaH_ClientConnectPost,
 };
 
 enum EStickerAttributeType 
@@ -31,35 +35,6 @@ enum EStickerAttributeType
     WearProgress,
     PatternScale,
     PatternRotation 
-};
-
-enum LoggingSeverity
-{
-	//-----------------------------------------------------------------------------
-	// An informative logging message.
-	//-----------------------------------------------------------------------------
-	LS_MESSAGE = 0,
-
-	//-----------------------------------------------------------------------------
-	// A warning, typically non-fatal
-	//-----------------------------------------------------------------------------
-	LS_WARNING = 1,
-
-	//-----------------------------------------------------------------------------
-	// A message caused by an Assert**() operation.
-	//-----------------------------------------------------------------------------
-	LS_ASSERT = 2,
-
-	//-----------------------------------------------------------------------------
-	// An error, typically fatal/unrecoverable.
-	//-----------------------------------------------------------------------------
-	LS_ERROR = 3,
-
-	//-----------------------------------------------------------------------------
-	// A placeholder level, higher than any legal value.
-	// Not a real severity value!
-	//-----------------------------------------------------------------------------
-	LS_HIGHEST_SEVERITY = 4,
 };
 
 enum CEconItemDefinition
@@ -292,7 +267,22 @@ methodmap CEconItemView
 
 typeset PTaHCB
 {
-	/** GiveNamedItem
+	/** GiveNamedItemPre
+	 *
+	 *	Called before the issuance of the item.
+	 *	-
+	 * @param iClient			Player Index.
+	 * @param sClassname		Classname weapons.
+	 * @param Item				Customization item.
+	 * @param IgnoredCEconItemView	If true ignores CEconItemView the item.
+	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
+	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR or set Origin = NULL_VECTOR, use OriginIsNULL param for it).
+	 *	-
+	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Return Plugin_Changed allow issuance item with changes.
+	*/
+	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView, bool &OriginIsNULL, float Origin[3]);
+	
+	/** GiveNamedItemPost
 	 *
 	 *	It called when a player receives a item.
 	 *	-
@@ -307,43 +297,29 @@ typeset PTaHCB
 	*/
 	function void (int iClient, const char[] sClassname, const CEconItemView Item, int iEnt, bool OriginIsNULL, const float Origin[3]);
 	
-	/** GiveNamedItemPre
-	 *
-	 *	Called before the issuance of the item.
-	 *	-
-	 * @param iClient			Player Index.
-	 * @param sClassname		Classname weapons.
-	 * @param Item				Customization item.
-	 * @param IgnoredCEconItemView	If true ignores CEconItemView the item.
-	 * @param OriginIsNULL		True if Origin is NULL_VECTOR.
-	 * @param Origin			Coordinates where the item was created at (You cannot compare Origin == NULL_VECTOR or set Origin = NULL_VECTOR, use OriginIsNULL param for it).
-	 *	-
-	 * @return	Return Plugin_Stop or Plugin_Handled stop granting item. Return Plugin_Continue allow issuance item without changes. Returns Plugin_Changed allow issuance item with changes.
-	*/
-	function Action (int iClient, char sClassname[64], CEconItemView &Item, bool &IgnoredCEconItemView, bool &OriginIsNULL, float Origin[3]);
-	
-	/** WeaponCanUse
+	/** WeaponCanUsePre
 	 *
 	 *	Called when a player is trying to pickup the item.
 	 *	-
 	 * @param iClient			Player Index.
 	 * @param iEnt				Index Entities item.
-	 * @param CanUse			For return without change.
+	 * @param bCanUse			Can be picked up.
 	 *	-
-	 * @return	Return false restrict pickup item. Return CanUse returns a response without changes. Return true allow pickup item.
+	 * @return	Return Plugin_Stop or Plugin_Handled to forbid lifting. Return Plugin_Continue to leave unchanged. Return Plugin_Changed to apply the changes specified in bCanUse.
 	*/
-	function bool (int iClient, int iEnt, bool CanUse);
+	function Action (int iClient, int iEnt, bool& bCanUse);
 	
-	/** SetPlayerModel
+	/** WeaponCanUsePost
 	 *
-	 *	Called after the change of the player model.
+	 *	Called when a player attempted to pick up an item.
 	 *	-
 	 * @param iClient			Player Index.
-	 * @param sModel			The path to the model.
+	 * @param iEnt				Index Entities item.
+	 * @param bCanUse			Can be picked up.
 	 *	-
 	 * @noreturn
 	*/
-	function void (int iClient, const char[] sModel);
+	function void (int iClient, int iEnt, bool bCanUse);
 	
 	/** SetPlayerModelPre
 	 *
@@ -355,9 +331,44 @@ typeset PTaHCB
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled stop changing models. Returns Plugin_Continue allow change model without changes. Returns Plugin_Changed allow the change to the modified model.
 	*/
-	function Action (int iClient, const char[] sModel, char sNewModel[128]);
+	function Action (int iClient, const char[] sModel, char sNewModel[256]);
 	
-	/** ConsolePrint
+	/** SetPlayerModelPost
+	 *
+	 *	Called after the change of the player model.
+	 *	-
+	 * @param iClient			Player Index.
+	 * @param sModel			The path to the model.
+	 *	-
+	 * @noreturn
+	*/
+	function void (int iClient, const char[] sModel);
+	
+	/** ClientVoiceToPre
+	 *
+	 *	Called when a player tries to speak.
+	 *	-
+	 * @param iClient			Player Index.
+	 * @param iTarget			Player target Index.
+	 * @param bListen			Can iTarget hear iClient.
+	 *	-
+	 * @return	Return Plugin_Stop or Plugin_Handled so that iTarget does not hear iClient. Return Plugin_Continue to leave unchanged. Return Plugin_Changed to apply the changes specified in bListen.
+	*/
+	function Action (int iClient, int iTarget, bool& bListen);
+	
+	/** ClientVoiceToPost
+	 *
+	 *	Called after the player tried to speak.
+	 *	-
+	 * @param iClient			Player Index.
+	 * @param iTarget			Player target Index.
+	 * @param bListen			Can iTarget hear iClient.
+	 *	-
+	 * @noreturn
+	*/
+	function void (int iClient, int iTarget, bool bListen);
+	
+	/** ConsolePrintPre
 	 *
 	 *	Called before displaying messages to the console player.
 	 *	-
@@ -369,52 +380,66 @@ typeset PTaHCB
 	 */
 	function Action (int iClient, char sMessage[1024]);
 	
-	/** ExecuteStringCommand
+	/** ConsolePrintPost
+	 *
+	 *	Called after displaying messages to the console player.
+	 *	-
+	 * @param iClient			Player Index.
+	 * @param sMessage			Text Message.
+	 *	-
+	 * @noreturn
+	 *	-
+	 */
+	function void (int iClient, const char[] sMessage);
+	
+	/** ExecuteStringCommandPre
 	 *
 	 *	Called before executing the command player of the team on the server.
 	 *	-
 	 * @param iClient			Player Index.
-	 * @param sMessage			Command.
+	 * @param sCommandString	Command.
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict execution. Return Plugin_Continue allow execution without changes. Return Plugin_Changed allow execution with changes.
 	*/
-	function Action (int iClient, char sMessage[512]);
+	function Action (int iClient, char sCommandString[512]);
 	
-	/** MapContentList
+	/** ExecuteStringCommandPost
 	 *
-	 *	Called before creating a map of content that will be added to the download(AddFileToDownloadsTable it does not cause this event).
+	 *	Called after executing the command player of the server.
 	 *	-
-	 * @param sFile				The path to the file that will be added to the download.
+	 * @param iClient			Player Index.
+	 * @param sCommandString	Command.
 	 *	-
-	 * @return	Return Plugin_Stop or Plugin_Handled restrict add content to download. Return Plugin_Continue allow add content to download without changes. Returns Plugin_Changed allow add content to download with changes.
+	 * @noreturn
 	*/
-	function Action (char sFile[128]);	
+	function void (int iClient, const char[] sCommandString);
 	
-	/** OnClientConnect
+	/** ClientConnectPre
 	 *
 	 *	Called before the authorization of the client to the server.
 	 *	-
+	 * @param iAccountID		AccountID client.
+	 * @param sIp				IP client.
 	 * @param sName				Nickname client.
 	 * @param sPassword			Password witch he introduced.
-	 * @param sIp				IP client.
-	 * @param sSteamID			SteamID (2 version) client.
 	 * @param rejectReason		The reason is not authorized.
 	 *	-
 	 * @return	Return Plugin_Stop or Plugin_Handled restrict autherization client. Return Plugin_Continue allow autherization without changes. Return Plugin_Changed allow autherization with changes.
 	*/
-	function Action (const char[] sName, char sPassword[128], const char[] sIp, const char[] sSteamID, char rejectReason[512]);
+	function Action (int iAccountID, const char[] sIp, const char[] sName, char sPassword[128], char rejectReason[255]);
 	
-	/** ServerConsolePrint
+	/** ClientConnectPost
 	 *
-	 *	Called before displaying a message in the server console (Be careful with the messages).
+	 *	Called after the authorization of the client to the server.
 	 *	-
-	 * @param sMessage				The message is printed to the server console.
-	 * @param severity				Logging severity message.
-	 * @param bBlockable			False if message was cached from another thread (Plugin_Stop and Plugin_Handled are ignored).
+	 * @param iClient			Player Index.
+	 * @param iAccountID		AccountID client.
+	 * @param sIp				IP client.
+	 * @param sName				Nickname client.
 	 *	-
-	 * @return	Return Plugin_Stop or Plugin_Handled restrict the display messages. Return Plugin_Continue allow display messages without changes.
+	 * @noreturn
 	*/
-	function Action (const char[] sMessage, LoggingSeverity severity, bool bBlockable);
+	function void (int iClient, int iAccountID, const char[] sIp, const char[] sName);
 };
 
 
@@ -430,13 +455,13 @@ native int PTaH_Version(char[] sBuf = NULL_STRING, int iLen = 0);
 
 /**
  *	Enables Hook.
- * @param type					Type Hook.
- * @param hk					Hook/UnHook.
+ * @param typeEvent				Event hook.
+ * @param type					Hook/Unhook.
  * @param callback				Callback.
  *	-
  * @return	Return true if one is fortunate, otherwise false.
 */
-native bool PTaH(PTaH_Hook hk, PTaH_HookType type, PTaHCB callback);
+native bool PTaH(PTaH_HookEvent typeEvent, PTaH_HookType type, PTaHCB callback);
 
 /**
  *	Gets CEconItemDefinition from ClassName weapons.

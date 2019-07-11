@@ -1,8 +1,8 @@
-/**
+﻿/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2004-2016 AlliedModders LLC.  All rights reserved.
+ * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -16,18 +16,10 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
  */
+
+#ifndef _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
+#define _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 
 class CEconItemAttributeDefinition;
 class CAttribute_String;
@@ -57,7 +49,7 @@ public:
 	CEconItemDefinition* GetItemDefinitionByName(const char* classname);
 	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t DefIndex);
 
-	CEconItemAttributeDefinition *GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
+	CEconItemAttributeDefinition* GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
 };
 
 class IEconItemAttributeIterator
@@ -121,21 +113,22 @@ public:
 	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const*, Vector const&) { return true; }
 };
 
-template <class A, class B> class CAttributeIterator_GetTypedAttributeValue : public CAttributeIterator_GetTypedAttributeValueBase
+template <class A, class B>
+class CAttributeIterator_GetTypedAttributeValue : public CAttributeIterator_GetTypedAttributeValueBase
 {
 public:
-	CAttributeIterator_GetTypedAttributeValue(CEconItemAttributeDefinition const *pItemAttrDef, B *value)
+	CAttributeIterator_GetTypedAttributeValue(CEconItemAttributeDefinition const* pItemAttrDef, B* value)
 		: m_pItemAttrDef(pItemAttrDef), m_value(value), m_found(false)
 	{
 	}
-	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const *pItemAttrDef, A value)
+	virtual bool OnIterateAttributeValue(CEconItemAttributeDefinition const* pItemAttrDef, A value)
 	{
 		if (m_pItemAttrDef == pItemAttrDef)
 		{
 			m_found = true;
 			*m_value = (B)value;
 		}
-		
+
 		return !m_found;
 	}
 
@@ -144,5 +137,28 @@ public:
 	bool m_found;
 };
 
+class CPlayerVoiceListener
+{
+public:
+	static void* operator new(size_t) throw();
+	static void operator delete(void*) { };
+
+	bool IsPlayerSpeaking(int iClient);
+};
+
+class CGameClient
+{
+public:
+	inline IClient* ToIClient()
+	{
+		return (IClient*)((intptr_t)this + sizeof(void*));
+	}
+};
+
+#define IClientToGameClient(pClient) (CGameClient*)((intptr_t)(pClient) - sizeof(void*))
+
 
 extern CEconItemSchema* g_pCEconItemSchema;
+extern CPlayerVoiceListener* g_pCPlayerVoiceListener;
+
+#endif // _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
