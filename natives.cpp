@@ -39,7 +39,7 @@ static cell_t PTaH_(IPluginContext* pContext, const cell_t* params)
 	{
 		if (params[1] >= PTaH_GiveNamedItemPre && PTaH_MAXHOOKS > params[1])
 		{
-			return g_ForwardManager.FunctionUpdateHook(static_cast<PTaH_HookEvent>(params[1]), pFunction, !static_cast<bool>(params[2]));
+			return g_ForwardManager.FunctionUpdateHook(static_cast<PTaH_HookEvent>(params[1]), pFunction, static_cast<bool>(params[2]));
 		}
 		else return pContext->ThrowNativeError("Invalid event PTaH_HookType specified");
 	}

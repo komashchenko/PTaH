@@ -58,11 +58,11 @@ public: // IPluginsListener
 	class TempleHookClient
 	{
 	public:
-		void Shutdown();
+		virtual void Shutdown();
 		void HookClient(int iClient);
 		void UnHookClient(int iClient);
 		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		virtual void UpdateHook();
 
 	protected:
 		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) = 0; //Crutch
@@ -98,8 +98,8 @@ public: // IPluginsListener
 	{
 	public:
 		void Init();
-		void Shutdown();
-		void UpdateHook();
+		virtual void Shutdown() override;
+		virtual void UpdateHook() override;
 
 		bool bIgnoredCEconItemView = false;
 
@@ -243,8 +243,6 @@ public: // IPluginsListener
 
 		bool SHHook(const char* pCommandString);
 	} ExecuteStringCommandPost;
-
-
 
 	class ClientConnectPre
 	{

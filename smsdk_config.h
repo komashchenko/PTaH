@@ -27,12 +27,12 @@
  */
 
 /* Basic information exposed publicly */
-#define SMEXT_CONF_NAME			"PTaH (P Tools and Hooks)"
-#define SMEXT_CONF_DESCRIPTION	"Expanding sdkhooks and sdktools"
+#define SMEXT_CONF_NAME			"PTaH"
+#define SMEXT_CONF_DESCRIPTION	"Additional CS:GO Hooks and Natives"
 #define SMEXT_CONF_VERSION		"1.1.0"
-#define PTaH_VERSION			11000
+#define PTaH_VERSION			101000
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
-#define SMEXT_CONF_URL			"https://zizt.ru/ | http://hlmod.ru | https://forums.alliedmods.net/"
+#define SMEXT_CONF_URL			"https://zizt.ru/ | https://hlmod.ru"
 #define SMEXT_CONF_LOGTAG		"PTaH"
 #define SMEXT_CONF_LICENSE		"GPL"
 #define SMEXT_CONF_DATESTRING	__DATE__

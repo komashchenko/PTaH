@@ -7,8 +7,8 @@
 
 enum PTaH_HookType
 {
-	Hook,
-	UnHook
+	UnHook,
+	Hook
 };
 
 enum PTaH_HookEvent
@@ -187,11 +187,11 @@ methodmap CEconItemView
 	 * @error CEconItemView == NULL.
 	*/
 	public int GetClientIndex() 
-    { 
+	{ 
 		int AccountID = this.GetAccountID();
 		for (int i = 1; i <= MaxClients; i++) if(IsClientInGame(i) && AccountID == GetSteamAccountID(i)) return i;
 		return -1;
-    }
+	}
 	
 	/**
 	 *	Gets Custom ItemView.
@@ -201,10 +201,10 @@ methodmap CEconItemView
 	 * @error CEconItemView == NULL.
 	*/
 	public bool IsCustomItemView() 
-    { 
+	{ 
 		int iBuf = this.GetAccountID();
 		return iBuf != 0 && iBuf != 1;
-    }
+	}
 	
 	/**
 	 *	Gets Quality skins.

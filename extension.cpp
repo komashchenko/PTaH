@@ -44,7 +44,6 @@ IServerGameClients* serverClients = nullptr;
 CEconItemSchema* g_pCEconItemSchema = nullptr;
 CPlayerVoiceListener* g_pCPlayerVoiceListener = nullptr;
 
-extern const sp_nativeinfo_t g_ExtensionNatives[];
 
 bool PTaH::SDK_OnLoad(char* error, size_t maxlength, bool late)
 {
