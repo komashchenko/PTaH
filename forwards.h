@@ -1,14 +1,14 @@
-/**
+﻿/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2004-2016 AlliedModders LLC.  All rights reserved.
+ * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, version 3.0, as published by the
  * Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
@@ -16,17 +16,6 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
  */
 
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_
@@ -34,7 +23,7 @@
 
 #include "extension.h"
 #include "netmessages.pb.h"
-#include <amtl/am-thread-utils.h> 
+
 
 template <int Type, class NetMessage, int Group, bool reliable>
 class CNetMessagePB : public INetMessage, public NetMessage {
@@ -46,55 +35,252 @@ public:
 typedef CNetMessagePB<16, CCLCMsg_SplitPlayerConnect, 0, true>	NetMsg_SplitPlayerConnect;
 
 class CEconItemView;
+class CGameClient;
 
-class CForwardManager
+class CForwardManager : public IClientListener, public IPluginsListener
 {
 public:
-	bool Init();
+	void Init();
 	void Shutdown();
-	
-	//GiveNamedItem
-	CBaseEntity *GiveNamedItem(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin);
-	//GiveNamedItemPre
-	CBaseEntity *GiveNamedItemPre(const char *szItem, int iSubType, CEconItemView *pView, bool removeIfNotCarried, Vector *pOrigin);
-	//WeaponCanUse
-	bool WeaponCanUse(CBaseCombatWeapon *pWeapon);
-	//SetModel
-	CBaseEntity *SetModel(const char *sModel);
-	//SetModelPre
-	CBaseEntity *SetModelPre(const char *sModel);
-	//ClientPrint
-	void ClientPrint(edict_t *pEdict, const char *szMsg);
-	//OnClientConnect
-	IClient *OnClientConnect(const netadr_t & address, int nProtocol, int iChallenge, int nAuthProtocol, const char *pchName, const char *pchPassword, const char *pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect *> &pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char *pUnknown, int iUnknown);
-	
-	
-	void HookClient(int client);
-	void UnhookClient(int client);
-	
-	void OnGameFrame(bool simulating);
 
-	int m_iHookId[5][MAXPLAYERS+1];
+	bool FunctionUpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook);
 
-	IChangeableForward *m_pGiveNamedItem;
-	IChangeableForward *m_pGiveNamedItemPre;
-	bool IgnoredCEconItemView;
-	CDetour *m_pFindMatchingWeaponsForTeamLoadout;
-	IChangeableForward *m_pWeaponCanUse;
-	IChangeableForward *m_pSetModel;
-	IChangeableForward *m_pSetModelPre;
-	IChangeableForward *m_pClientPrintf;
-	IChangeableForward *m_pOnClientConnect;
-	CDetour *m_pDExecuteStringCommand;
-	IChangeableForward *m_pExecuteStringCommand;
-	CDetour *m_pCDownloadListGenerator;
-	IChangeableForward *m_pMapContentList;
-	CDetour *m_pLoggingSeverity;
-	IChangeableForward *m_pServerConsolePrint;
-	
-	ke::ThreadId Thread_Id;
+	void LevelShutdown();
+
+public: // IClientListener
+	virtual void OnClientConnected(int iClient);
+	virtual void OnClientPutInServer(int iClient);
+	virtual void OnClientDisconnected(int iClient);
+
+public: // IPluginsListener
+	virtual void OnPluginUnloaded(IPlugin* plugin);
+
+	class TempleHookClient
+	{
+	public:
+		virtual void Shutdown();
+		void HookClient(int iClient);
+		void UnHookClient(int iClient);
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		virtual void UpdateHook();
+
+	protected:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) = 0; //Crutch
+
+		IChangeableForward* pForward = nullptr;
+
+		int iHookId[SM_MAXPLAYERS + 1] = { -1 };
+		bool bHooked = false;
+		int iOffset = -1;
+	};
+
+	class TempleHookCGameClient
+	{
+	public:
+		void Shutdown();
+		void Hook(int iClient);
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		void UpdateHook();
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) = 0; //Crutch
+		inline CGameClient* __IClientToGameClient(IClient* pClient);
+		inline IClient* __GameClientToIClient(CGameClient* pGameClient);
+
+		IChangeableForward* pForward = nullptr;
+
+		int iHookId = -1;
+		bool bHooked = false;
+		int iOffset = -1;
+	};
+
+	class GiveNamedItemPre : public TempleHookClient
+	{
+	public:
+		void Init();
+		virtual void Shutdown() override;
+		virtual void UpdateHook() override;
+
+		bool bIgnoredCEconItemView = false;
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		CBaseEntity* SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin);
+
+		CDetour* pFindMatchingWeaponsForTeamLoadout = nullptr;
+	} GiveNamedItemPre;
+
+	class GiveNamedItemPost : public TempleHookClient
+	{
+	public:
+		void Init();
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		CBaseEntity* SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin);
+	} GiveNamedItemPost;
+
+	class WeaponCanUsePre : public TempleHookClient
+	{
+	public:
+		void Init();
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		bool SHHook(CBaseCombatWeapon* pWeapon);
+	} WeaponCanUsePre;
+
+	class WeaponCanUsePost : public TempleHookClient
+	{
+	public:
+		void Init();
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		bool SHHook(CBaseCombatWeapon* pWeapon);
+	} WeaponCanUsePost;
+
+	class SetPlayerModelPre : public TempleHookClient
+	{
+	public:
+		void Init();
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		CBaseEntity* SHHook(const char* sModel);
+	} SetPlayerModelPre;
+
+	class SetPlayerModelPost : public TempleHookClient
+	{
+	public:
+		void Init();
+
+	private:
+		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+
+		CBaseEntity* SHHook(const char* sModel);
+	} SetPlayerModelPost;
+
+	class ClientVoiceToPre
+	{
+	public:
+		void Init();
+		void Shutdown();
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		void UpdateHook();
+
+	protected:
+		bool SHHook(int iReceiver, int iSender, bool bListen);
+		void SHHookClientVoice(edict_t* pEdict);
+
+		IChangeableForward* pForward = nullptr;
+
+		bool bStartVoice[SM_MAXPLAYERS + 1] = { false };
+		bool bHooked = false;
+	} ClientVoiceToPre;
+
+	class ClientVoiceToPost
+	{
+	public:
+		void Init();
+		void Shutdown();
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		void UpdateHook();
+
+	protected:
+		bool SHHook(int iReceiver, int iSender, bool bListen);
+
+		IChangeableForward* pForward = nullptr;
+
+		bool bHooked = false;
+	} ClientVoiceToPost;
+
+	class ConsolePrintPre : public TempleHookCGameClient
+	{
+	public:
+		void Init();
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+
+		void SHHook(const char* szFormat);
+	} ConsolePrintPre;
+
+	class ConsolePrintPost : public TempleHookCGameClient
+	{
+	public:
+		void Init();
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+
+		void SHHook(const char* szFormat);
+	} ConsolePrintPost;
+
+	class ExecuteStringCommandPre : public TempleHookCGameClient
+	{
+	public:
+		void Init();
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+
+		bool SHHook(const char* pCommandString);
+	} ExecuteStringCommandPre;
+
+	class ExecuteStringCommandPost : public TempleHookCGameClient
+	{
+	public:
+		void Init();
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+
+		bool SHHook(const char* pCommandString);
+	} ExecuteStringCommandPost;
+
+	class ClientConnectPre
+	{
+	public:
+		void Init();
+		void Shutdown();
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		void UpdateHook();
+
+	protected:
+		IClient* SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown);
+
+		IChangeableForward* pForward = nullptr;
+
+		bool bHooked = false;
+		int iOffset = -1;
+		int iHookId = -1;
+	} ClientConnectPre;
+
+	class ClientConnectPost
+	{
+	public:
+		void Init();
+		void Shutdown();
+		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
+		void UpdateHook();
+
+	protected:
+		IClient* SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown);
+
+		IChangeableForward* pForward = nullptr;
+
+		bool bHooked = false;
+		int iOffset = -1;
+		int iHookId = -1;
+	} ClientConnectPost;
 };
 
-extern CForwardManager g_pPTaHForwards;
+extern CForwardManager g_ForwardManager;
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_

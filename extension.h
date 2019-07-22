@@ -1,14 +1,14 @@
-/**
+﻿/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2004-2016 AlliedModders LLC.  All rights reserved.
+ * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, version 3.0, as published by the
  * Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
@@ -16,70 +16,61 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * As a special exception, AlliedModders LLC gives you permission to link the
- * code of this program (as well as its derivative works) to "Half-Life 2," the
- * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
- * by the Valve Corporation.  You must obey the GNU General Public License in
- * all respects for all other code used.  Additionally, AlliedModders LLC grants
- * this exception to all derivative works.  AlliedModders LLC defines further
- * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
- * or <http://www.sourcemod.net/license.php>.
- *
- * Version: $Id$
  */
 
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
-/**
+ /**
  * @file extension.h
  * @brief Sample extension code header.
  */
-#define MAXPLAYERS 65
- 
- 
-#include "smsdk_ext.h"
-#include <IBinTools.h>
-#include <ISDKTools.h>
-#include "CDetour/detours.h"
-#include <sourcehook.h>
-#include "netadr.h"
-#include "inetmessage.h"
-#include <iplayerinfo.h>
-#include <string.h>
-#include <sys/stat.h> 
-#include <isteamutils.h>
-#include "steamclientpublic.h"
-#include <iserver.h>
-#include "IMemoryUtils.h"
 
+
+#include "smsdk_ext.h"
+#include <ISDKTools.h>
+#include <iplayerinfo.h>
+#include <iserver.h>
+#include <server_class.h>
+#include <ivoiceserver.h>
+#include <CDetour/detours.h>
+#include <netadr.h>
+#include <inetmessage.h>
+
+#ifdef WIN32
+#define VCallingConvention __thiscall
+#else
+#define VCallingConvention __cdecl
+#endif
 
 typedef CBaseEntity CBaseCombatWeapon;
 
-enum PTaHType
+enum PTaH_HookEvent
 {
-	PTaH_GiveNamedItem = 0,
-	PTaH_GiveNamedItemPre,
-	PTaH_WeaponCanUse,
-	PTaH_SetPlayerModel,
+	PTaH_GiveNamedItemPre = 10,
+	PTaH_GiveNamedItemPost,
+	PTaH_WeaponCanUsePre,
+	PTaH_WeaponCanUsePost,
 	PTaH_SetPlayerModelPre,
-	PTaH_ConsolePrint,
-	PTaH_MapContentList,
-	PTaH_OnClientConnect,
-	PTaH_ExecuteStringCommand,
-	PTaH_ServerConsolePrint
+	PTaH_SetPlayerModelPost,
+	PTaH_ClientVoiceToPre,
+	PTaH_ClientVoiceToPost,
+	PTaH_ConsolePrintPre,
+	PTaH_ConsolePrintPost,
+	PTaH_ExecuteStringCommandPre,
+	PTaH_ExecuteStringCommandPost,
+	PTaH_ClientConnectPre,
+	PTaH_ClientConnectPost,
+
+	PTaH_MAXHOOKS
 };
 
 /**
  * @brief Sample implementation of the SDK Extension.
  * Note: Uncomment one of the pre-defined virtual functions in order to use it.
  */
-class PTaH : public SDKExtension, public IClientListener
+class PTaH : public SDKExtension
 {
-public:
-	virtual void OnClientPutInServer(int client);
-	virtual void OnClientDisconnected(int client);
 public:
 	/**
 	 * @brief This is called after the initial loading sequence has been processed.
@@ -89,8 +80,8 @@ public:
 	 * @param late		Whether or not the module was loaded after map load.
 	 * @return			True to succeed loading, false to fail.
 	 */
-	virtual bool SDK_OnLoad(char *error, size_t maxlength, bool late);
-	
+	virtual bool SDK_OnLoad(char* error, size_t maxlength, bool late);
+
 	/**
 	 * @brief This is called right before the extension is unloaded.
 	 */
@@ -105,16 +96,16 @@ public:
 	/**
 	 * @brief Called when the pause state is changed.
 	 */
-	//virtual void SDK_OnPauseChange(bool paused);
+	 //virtual void SDK_OnPauseChange(bool paused);
 
-	/**
-	 * @brief this is called when Core wants to know if your extension is working.
-	 *
-	 * @param error		Error message buffer.
-	 * @param maxlength	Size of error message buffer.
-	 * @return			True if working, false otherwise.
-	 */
-	//virtual bool QueryRunning(char *error, size_t maxlength);
+	 /**
+	  * @brief this is called when Core wants to know if your extension is working.
+	  *
+	  * @param error		Error message buffer.
+	  * @param maxlength	Size of error message buffer.
+	  * @return			True if working, false otherwise.
+	  */
+	  //virtual bool QueryRunning(char *error, size_t maxlength);
 public:
 #if defined SMEXT_CONF_METAMOD
 	/**
@@ -125,7 +116,7 @@ public:
 	 * @param late			Whether or not Metamod considers this a late load.
 	 * @return				True to succeed, false to fail.
 	 */
-	//virtual bool SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlength, bool late);
+	virtual bool SDK_OnMetamodLoad(ISmmAPI* ismm, char* error, size_t maxlength, bool late);
 
 	/**
 	 * @brief Called when Metamod is detaching, after the extension version is called.
@@ -135,22 +126,20 @@ public:
 	 * @param maxlength		Maximum size of error buffer.
 	 * @return				True to succeed, false to fail.
 	 */
-	//virtual bool SDK_OnMetamodUnload(char *error, size_t maxlength);
+	 //virtual bool SDK_OnMetamodUnload(char *error, size_t maxlength);
 
-	/**
-	 * @brief Called when Metamod's pause state is changing.
-	 * NOTE: By default this is blocked unless sent from SourceMod.
-	 *
-	 * @param paused		Pause state being set.
-	 * @param error			Error buffer.
-	 * @param maxlength		Maximum size of error buffer.
-	 * @return				True to succeed, false to fail.
-	 */
-	//virtual bool SDK_OnMetamodPauseChange(bool paused, char *error, size_t maxlength);
+	 /**
+	  * @brief Called when Metamod's pause state is changing.
+	  * NOTE: By default this is blocked unless sent from SourceMod.
+	  *
+	  * @param paused		Pause state being set.
+	  * @param error			Error buffer.
+	  * @param maxlength		Maximum size of error buffer.
+	  * @return				True to succeed, false to fail.
+	  */
+	  //virtual bool SDK_OnMetamodPauseChange(bool paused, char *error, size_t maxlength);
 #endif
 };
-
-#endif // _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
 
 /* Interfaces from SourceMod */
 #define GameConf_SDKT 0
@@ -158,8 +147,11 @@ public:
 #define GameConf_PTaH 2
 #define GameConf_CSST 3
 
-extern IBinTools *bintools;
-extern ISDKTools *sdktools;
-extern IGameConfig *g_pGameConf[4];
+extern IGameConfig * g_pGameConf[4];
+extern ISDKTools* sdktools;
+extern IServer* iserver;
+extern IVoiceServer* voiceserver;
+extern CGlobalVars* gpGlobals;
+extern IServerGameClients* serverClients;
 
-extern IServer *iserver;
+#endif // _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
