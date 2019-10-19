@@ -37,17 +37,24 @@ for sdk_name in ['csgo']:
   binary.sources += [
     os.path.join(Extension.sm_root, 'public', 'CDetour', 'detours.cpp'),
     os.path.join(Extension.sm_root, 'public', 'asm', 'asm.c'),
-	os.path.join(sdk.path, 'public', 'engine', 'protobuf', 'netmessages.pb.cc'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'decode.c'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'itab.c'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'syn-att.c'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'syn-intel.c'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'syn.c'),
+    os.path.join(Extension.sm_root, 'public', 'libudis86', 'udis86.c'),
+	
+    os.path.join(sdk.path, 'public', 'engine', 'protobuf', 'netmessages.pb.cc'),
     os.path.join(sdk.path, 'public', 'game', 'shared', 'csgo', 'protobuf', 'cstrike15_usermessages.pb.cc'),
     os.path.join(sdk.path, 'public', 'game', 'shared', 'csgo', 'protobuf', 'cstrike15_usermessage_helpers.cpp'),
-    ]
+  ]
   
   compiler.cxxincludes += [
     os.path.join(sdk.path, 'common', 'protobuf-2.5.0', 'src'),
     os.path.join(sdk.path, 'public', 'engine', 'protobuf'),
     os.path.join(sdk.path, 'public', 'game', 'shared', 'csgo', 'protobuf'),
-  os.path.join(sdk.path, 'public', 'steam'),
-  os.path.join(sdk.path, 'game', 'server')
+    os.path.join(sdk.path, 'public', 'steam'),
+    os.path.join(sdk.path, 'game', 'server')
   ]
   
   if builder.target_platform == 'linux':
