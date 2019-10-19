@@ -83,7 +83,10 @@ void CForwardManager::Shutdown()
 
 	SH_REMOVE_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CForwardManager::LevelShutdown), true);
 
-	LevelShutdown();
+	for (int i = 1; i <= SM_MAXPLAYERS; i++)
+	{
+		OnClientDisconnected(i);
+	}
 
 	GiveNamedItemPre.Shutdown();
 	GiveNamedItemPost.Shutdown();
