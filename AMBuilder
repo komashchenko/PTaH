@@ -25,6 +25,8 @@ else:
   project.sources += [os.path.join(Extension.sm_root, 'public', 'smsdk_ext.cpp')]
 
 project.sources += sourceFiles
+
+project.compiler.defines += ['HAVE_STRING_H'];
   
 for sdk_name in ['csgo']:
   if sdk_name not in Extension.sdks:
