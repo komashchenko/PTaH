@@ -86,8 +86,8 @@
 			}
 			"GetClassName"
 			{
-				"windows"		"448"
-				"linux"			"448"
+				"windows"		"444"
+				"linux"			"444"
 			}
 			"GetCustomPaintKitIndex"
 			{
