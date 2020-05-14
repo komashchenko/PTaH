@@ -2,7 +2,7 @@
 * vim: set ts=4 :
 * =============================================================================
 * SourceMod P Tools and Hooks Extension
-* Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+* Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
 * =============================================================================
 *
 * This program is free software; you can redistribute it and/or modify it under
@@ -470,4 +470,90 @@ void* CPlayerVoiceListener::operator new(size_t) throw()
 bool CPlayerVoiceListener::IsPlayerSpeaking(int iClient)
 {
 	return *(float*)((intptr_t)this + 4 * iClient + 12) + 0.5f > gpGlobals->curtime;
+}
+
+intptr_t CCSPlayerInventory::GetInventoryOffset()
+{
+	static intptr_t iInventoryOffset = -1;
+
+	if (iInventoryOffset == -1)
+	{
+		void* addr = nullptr;
+
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &iInventoryOffset))
+		{
+			smutils->LogError(myself, "Failed to get CCSPlayerInventoryOffset offset.");
+
+			return -1;
+		}
+
+		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr))
+		{
+			smutils->LogError(myself, "Failed to get HandleCommand_Buy_Internal address.");
+
+			return -1;
+		}
+
+		iInventoryOffset = *(intptr_t*)((intptr_t)addr + iInventoryOffset);
+	}
+
+	return iInventoryOffset;
+}
+
+CCSPlayerInventory* CCSPlayerInventory::FromPlayer(CBaseEntity* pPlayer)
+{
+	static int offset = GetInventoryOffset();
+
+	if (offset == -1)
+	{
+		return nullptr;
+	}
+
+	return (CCSPlayerInventory*)((intptr_t)pPlayer + offset);
+}
+
+CBaseEntity* CCSPlayerInventory::ToPlayer()
+{
+	static int offset = GetInventoryOffset();
+
+	if (offset == -1)
+	{
+		return nullptr;
+	}
+
+	return (CBaseEntity*)((intptr_t)this - offset);
+}
+
+CEconItemView* CCSPlayerInventory::GetItemInLoadout(int iTeam, int iLoadoutSlot)
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetItemInLoadout offset.");
+
+			return nullptr;
+		}
+	}
+
+	return ((CEconItemView*(VCallingConvention*)(void*, int, int))(*(void***)this)[offset])(this, iTeam, iLoadoutSlot);
+}
+
+CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItems()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("InventoryItems", &offset))
+		{
+			smutils->LogError(myself, "Failed to get InventoryItems offset.");
+
+			return nullptr;
+		}
+	}
+
+	return (CUtlVector<CEconItemView*>*)((intptr_t)this + offset);
 }

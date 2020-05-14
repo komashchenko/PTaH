@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -21,7 +21,6 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 
-class CEconItemAttributeDefinition;
 class CAttribute_String;
 
 enum EStickerAttributeType
@@ -30,6 +29,41 @@ enum EStickerAttributeType
 	WearProgress,
 	PatternScale,
 	PatternRotation
+};
+
+class ISchemaAttributeType
+{
+protected:
+	virtual ~ISchemaAttributeType() { }
+};
+
+template<typename T> class ISchemaAttributeTypeBase : public ISchemaAttributeType {};
+template<typename T> class CSchemaAttributeTypeBase : public ISchemaAttributeTypeBase<T> {};
+template<typename T> class CSchemaAttributeTypeProtobufBase : public CSchemaAttributeTypeBase<T> {};
+
+class CSchemaAttributeType_Default : public CSchemaAttributeTypeBase<unsigned int> {};
+class CSchemaAttributeType_Uint32 : public CSchemaAttributeTypeBase<unsigned int> {};
+class CSchemaAttributeType_Float : public CSchemaAttributeTypeBase<float> {};
+class CSchemaAttributeType_String : public CSchemaAttributeTypeProtobufBase<CAttribute_String> {};
+class CSchemaAttributeType_Vector : public CSchemaAttributeTypeBase<Vector> {};
+
+class CEconItemAttributeDefinition
+{
+public:
+	virtual uint16_t GetDefinitionIndex() const = 0;
+	virtual const char* GetDefinitionName() const = 0;
+	virtual const char* GetDescriptionString() const = 0;
+	virtual const char* GetAttributeClass() const = 0;
+	virtual const KeyValues* GetRawDefinition() const = 0;
+
+	template<typename T> bool IsAttributeType() const
+	{
+		return (dynamic_cast<T*>(this->m_pAttributeType) != nullptr);
+	}
+
+	KeyValues* m_pKVAttribute;
+	uint16_t m_nDefIndex;
+	ISchemaAttributeType* m_pAttributeType;
 };
 
 class CEconItemDefinition
@@ -156,6 +190,17 @@ public:
 };
 
 #define IClientToGameClient(pClient) (CGameClient*)((intptr_t)(pClient) - sizeof(void*))
+
+class CCSPlayerInventory
+{
+	static intptr_t GetInventoryOffset();
+public:
+	static CCSPlayerInventory* FromPlayer(CBaseEntity* pPlayer);
+	CBaseEntity* ToPlayer();
+
+	CEconItemView* GetItemInLoadout(int iTeam, int iLoadoutSlot);
+	CUtlVector<CEconItemView*>* GetItems();
+};
 
 
 extern CEconItemSchema* g_pCEconItemSchema;

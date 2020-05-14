@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -75,7 +75,7 @@ static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const c
 	return 0;
 }
 
-static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
+static cell_t PTaH_GetItemInLoadoutDeprecated(IPluginContext* pContext, const cell_t* params)
 {
 	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
 
@@ -89,44 +89,18 @@ static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* para
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
 
-	static int iGetItemInLoadoutOffset = -1, iInventoryOffset = -1;
-
-	if (iGetItemInLoadoutOffset == -1 || iInventoryOffset == -1)
-	{
-		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemInLoadout", &iGetItemInLoadoutOffset))
-		{
-			smutils->LogError(myself, "Failed to get GetItemInLoadout offset.");
-
-			return 0;
-		}
-
-		void* addr = nullptr;
-
-		if (!g_pGameConf[GameConf_CSST]->GetOffset("CCSPlayerInventoryOffset", &iInventoryOffset))
-		{
-			smutils->LogError(myself, "Failed to get CCSPlayerInventoryOffset offset.");
-
-			return 0;
-		}
-
-		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr))
-		{
-			smutils->LogError(myself, "Failed to get HandleCommand_Buy_Internal address.");
-
-			return 0;
-		}
-
-		iInventoryOffset = *(int*)((intptr_t)addr + iInventoryOffset);
-	}
-
 	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
 
-	void* pCCSPlayerInventory = (void*)((intptr_t)pEntity + iInventoryOffset);
+	CCSPlayerInventory* pPlayerInventory = CCSPlayerInventory::FromPlayer(pEntity);
 
-	CEconItemView* pItemView = ((CEconItemView * (VCallingConvention*)(void*, int, int))(*(void***)pCCSPlayerInventory)[iGetItemInLoadoutOffset])
-		(pCCSPlayerInventory, params[2], params[3]);
+	if (pPlayerInventory)
+	{
+		CEconItemView* pItemView = pPlayerInventory->GetItemInLoadout(params[2], params[3]);
 
-	return reinterpret_cast<cell_t>(pItemView);
+		return reinterpret_cast<cell_t>(pItemView);
+	}
+
+	return 0;
 }
 
 //https://github.com/alliedmodders/sourcemod/blob/0c8e6e29184bf58851954019a2060d84f0c556f9/extensions/sdkhooks/util.cpp#L37
@@ -163,7 +137,7 @@ bool UTIL_ContainsDataTable(SendTable* pTable, const char* name)
 }
 
 //Thank you GoD-Tony https://github.com/komashchenko/PTaH/pull/1
-static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cell_t* params)
+static cell_t PTaH_GetEconItemViewFromEconEntity(IPluginContext* pContext, const cell_t* params)
 {
 	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
 
@@ -174,9 +148,9 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cel
 
 	IServerNetworkable* pNet = reinterpret_cast<IServerUnknown*>(pEntity)->GetNetworkable();
 
-	if (!pNet || !UTIL_ContainsDataTable(pNet->GetServerClass()->m_pTable, "DT_BaseCombatWeapon"))
+	if (!pNet || !UTIL_ContainsDataTable(pNet->GetServerClass()->m_pTable, "DT_EconEntity"))
 	{
-		return pContext->ThrowNativeError("Entity %d is not weapon", params[1]);
+		return pContext->ThrowNativeError("Entity %d is not CEconEntity", params[1]);
 	}
 
 	static unsigned int offset = 0;
@@ -189,6 +163,27 @@ static cell_t PTaH_GetEconItemViewFromWeapon(IPluginContext* pContext, const cel
 	}
 
 	return reinterpret_cast<cell_t>(pEntity) + offset;
+}
+
+static cell_t PTaH_GetPlayerInventory(IPluginContext* pContext, const cell_t* params)
+{
+	IGamePlayer* pPlayer = playerhelpers->GetGamePlayer(params[1]);
+
+	if (!pPlayer)
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+
+	if (!pPlayer->IsInGame())
+	{
+		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
+	}
+
+	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
+
+	CCSPlayerInventory* pPlayerInventory = CCSPlayerInventory::FromPlayer(pEntity);
+
+	return reinterpret_cast<cell_t>(pPlayerInventory);
 }
 
 static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params)
@@ -646,18 +641,6 @@ static cell_t PTaH_GetOrigin(IPluginContext* pContext, const cell_t* params)
 	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
-static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
-{
-	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
-
-	if (pItemView)
-	{
-		return pItemView->GetKillEaterValue();
-	}
-
-	return pContext->ThrowNativeError("CEconItemView == nullptr");
-}
-
 static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
@@ -675,6 +658,134 @@ static cell_t PTaH_GetCustomName(IPluginContext* pContext, const cell_t* params)
 	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
+static cell_t PTaH_GetKillEater(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
+	if (pItemView)
+	{
+		return pItemView->GetKillEaterValue();
+	}
+
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
+}
+
+static cell_t PTaH_GetAttributeValueByIndex(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
+	if (pItemView)
+	{
+		if (g_pCEconItemSchema)
+		{
+			CEconItemAttributeDefinition* pItemAttrDef = g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(params[2]);
+
+			if (!pItemAttrDef)
+			{
+				return pContext->ThrowNativeError("Attribute index %d is invalid", params[2]);
+			}
+
+			cell_t* pValue;
+
+			pContext->LocalToPhysAddr(params[3], &pValue);
+
+			if (pItemAttrDef->IsAttributeType<CSchemaAttributeType_Float>())
+			{
+				CAttributeIterator_GetTypedAttributeValue<float, float> it(pItemAttrDef, reinterpret_cast<float*>(pValue));
+				
+				pItemView->IterateAttributes(&it);
+
+				if (it.m_found)
+				{
+					return 1;
+				}
+			}
+			else
+			{
+				CAttributeIterator_GetTypedAttributeValue<unsigned int, unsigned int> it(pItemAttrDef, reinterpret_cast<unsigned int*>(pValue));
+
+				pItemView->IterateAttributes(&it);
+
+				if (it.m_found)
+				{
+					return 1;
+				}
+			}
+		}
+		else
+		{
+			smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+		}
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
+}
+
+static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
+{
+	CCSPlayerInventory* pPlayerInventory = reinterpret_cast<CCSPlayerInventory*>(params[1]);
+
+	if (pPlayerInventory)
+	{
+		CEconItemView* pItemView = pPlayerInventory->GetItemInLoadout(params[2], params[3]);
+
+		return reinterpret_cast<cell_t>(pItemView);
+	}
+
+	return pContext->ThrowNativeError("CCSPlayerInventory == nullptr");
+}
+
+static cell_t PTaH_GetItemsCount(IPluginContext* pContext, const cell_t* params)
+{
+	CCSPlayerInventory* pPlayerInventory = reinterpret_cast<CCSPlayerInventory*>(params[1]);
+
+	if (pPlayerInventory)
+	{
+		CUtlVector<CEconItemView*>* pItems = pPlayerInventory->GetItems();
+
+		if (pItems)
+		{
+			return pItems->Count();
+		}
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CCSPlayerInventory == nullptr");
+}
+
+static cell_t PTaH_GetItem(IPluginContext* pContext, const cell_t* params)
+{
+	CCSPlayerInventory* pPlayerInventory = reinterpret_cast<CCSPlayerInventory*>(params[1]);
+
+	if (pPlayerInventory)
+	{
+		CUtlVector<CEconItemView*>* pItems = pPlayerInventory->GetItems();
+
+		if (pItems)
+		{
+			int iIndex = params[2];
+
+			if (iIndex >= 0 && iIndex < pItems->Count())
+			{
+				CEconItemView* pItemView = pItems->Element(iIndex);
+
+				return reinterpret_cast<cell_t>(pItemView);
+			}
+			else
+			{
+				return pContext->ThrowNativeError("Item index %d is invalid", iIndex);
+			}
+		}
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CCSPlayerInventory == nullptr");
+}
+
 
 extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
@@ -682,8 +793,8 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH",												PTaH_ },
 	{ "PTaH_GetItemDefinitionByName",						PTaH_GetItemDefinitionByName },
 	{ "PTaH_GetItemDefinitionByDefIndex",					PTaH_GetItemDefinitionByDefIndex },
-	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadout },
-	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromWeapon },
+	{ "PTaH_GetEconItemViewFromEconEntity",					PTaH_GetEconItemViewFromEconEntity },
+	{ "PTaH_GetPlayerInventory",							PTaH_GetPlayerInventory },
 	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
 	{ "PTaH_ForceFullUpdate",								PTaH_ForceFullUpdate },
 	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
@@ -706,5 +817,12 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.GetOrigin",							PTaH_GetOrigin },
 	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
 	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEater },
+	{ "CEconItemView.GetAttributeValueByIndex",				PTaH_GetAttributeValueByIndex },
+	{ "CCSPlayerInventory.GetItemInLoadout",				PTaH_GetItemInLoadout },
+	{ "CCSPlayerInventory.GetItemsCount",					PTaH_GetItemsCount },
+	{ "CCSPlayerInventory.GetItem",							PTaH_GetItem },
+	// Deprecated
+	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadoutDeprecated },
+	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromEconEntity },
 	{ nullptr,												nullptr }
 };

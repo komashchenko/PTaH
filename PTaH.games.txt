@@ -179,6 +179,16 @@
 				"windows"		"32"
 				"linux"			"27"
 			}
+			"SendInventoryUpdateEvent"
+			{
+				"windows"		"16"
+				"linux"			"17"
+			}
+			"InventoryItems"
+			{
+				"windows"		"44"
+				"linux"			"44"
+			}
 		}
 	}
 }
