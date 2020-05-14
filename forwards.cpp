@@ -934,7 +934,7 @@ void CForwardManager::ClientConnectPre::Init()
 
 			pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
 		}
-		else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPost will be unavailable.");
+		else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPre will be unavailable.");
 	}
 	else smutils->LogError(myself, "Failed to get RejectConnection offset, Hook ClientConnectPre will be unavailable.");
 }
