@@ -30,6 +30,13 @@ enum PTaH_HookEvent
 	PTaH_InventoryUpdatePost = 25
 };
 
+enum PTaH_ModelType
+{
+	ViewModel = 0,
+	WorldModel,
+	DroppedModel
+};
+
 enum EStickerAttributeType 
 {
 	StickerID = 0,        // int
@@ -44,7 +51,7 @@ enum EEconItemQuality
 
 	AE_NORMAL = 0,
 	AE_GENUINE = 1,
-	AE_VINTAGE,	
+	AE_VINTAGE,
 	AE_UNUSUAL,
 	AE_UNIQUE,
 	AE_COMMUNITY,
@@ -170,12 +177,41 @@ methodmap CEconItemDefinition
 	public native int GetNumSupportedStickerSlots();
 
 	/**
+	 * Gets item econ image path in resource/flash/.
+	 * Example: "econ/weapons/base_weapons/weapon_knife"
+	 *
+	 * @note Add ".png" in the end of string for full formatting.
+	 *
+	 * @param sBuffer      Destination string buffer.
+	 * @param iLen         Maximum length of output string buffer.
+	 *
+	 * @return             Returns length or 0 if failed.
+	 *
+	 * @error              CEconItemDefinition == NULL.
+	 */
+	public native int GetEconImage(char[] sBuffer, int iLen);
+
+	/**
+	 * Gets item model path.
+	 *
+	 * @param iModelType   Model type.
+	 * @param sBuffer      Destination string buffer.
+	 * @param iLen         Maximum length of output string buffer.
+	 *                     Max size PLATFORM_MAX_PATH.
+	 *
+	 * @return             Returns length or 0 if failed.
+	 *
+	 * @error              CEconItemDefinition == NULL or model type invalid.
+	 */
+	public native int GetModel(PTaH_ModelType iModelType, char[] sBuffer, int iLen);
+
+	/**
 	 * Gets item classname.
 	 *
 	 * @param sBuffer      Destination string buffer.
 	 * @param iLen         Maximum length of output string buffer.
 	 *
-	 * @return             Returns classname length.
+	 * @return             Returns length or 0 if failed.
 	 *
 	 * @error              CEconItemDefinition == NULL.
 	 */
@@ -256,6 +292,17 @@ methodmap CEconItemView
 	 * @error              CEconItemView == NULL.
 	 */
 	public native CEconItemDefinition GetItemDefinition();
+
+	/**
+	 * Gets ItemID of ItemView.
+	 *
+	 * @param iItemID      Where will it be recorded ItemID.
+	 *
+	 * @noreturn
+	 *
+	 * @error              CEconItemView == NULL.
+	 */
+	public native void GetItemID(int iItemID[2]);
 
 	/**
 	 * Gets AccountID owner of ItemView.
