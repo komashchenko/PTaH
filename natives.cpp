@@ -500,7 +500,7 @@ static cell_t PTaH_GetModel(IPluginContext* pContext, const cell_t* params)
 		size_t numBytes = 0;
 		const char* sBuf;
 
-		switch ((PTaH_ModelType)params[2])
+		switch (static_cast<PTaH_ModelType>(params[2]))
 		{
 			case ViewModel:
 			{

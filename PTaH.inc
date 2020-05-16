@@ -294,6 +294,15 @@ methodmap CEconItemView
 	public native CEconItemDefinition GetItemDefinition();
 
 	/**
+	 * Gets AccountID owner of ItemView.
+	 *
+	 * @return             Returns AccountID.
+	 *
+	 * @error              CEconItemView == NULL.
+	 */
+	public native int GetAccountID();
+
+	/**
 	 * Gets ItemID of ItemView.
 	 *
 	 * @param iItemID      Where will it be recorded ItemID.
@@ -303,15 +312,6 @@ methodmap CEconItemView
 	 * @error              CEconItemView == NULL.
 	 */
 	public native void GetItemID(int iItemID[2]);
-
-	/**
-	 * Gets AccountID owner of ItemView.
-	 *
-	 * @return             Returns AccountID.
-	 *
-	 * @error              CEconItemView == NULL.
-	 */
-	public native int GetAccountID();
 
 	/**
 	 * Gets owner of ItemView.
@@ -827,15 +827,18 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
+	MarkNativeAsOptional("CEconItemDefinition.GetEconImage");
+	MarkNativeAsOptional("CEconItemDefinition.GetModel");
 	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitSeed");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitWear");
 	MarkNativeAsOptional("CEconItemView.GetStickerAttributeBySlotIndex");
 	MarkNativeAsOptional("CEconItemView.IsTradable");
-	MarkNativeAsOptional("CEconItemView.IsMarketable");	
+	MarkNativeAsOptional("CEconItemView.IsMarketable");
 	MarkNativeAsOptional("CEconItemView.GetItemDefinition");
 	MarkNativeAsOptional("CEconItemView.GetAccountID");
+	MarkNativeAsOptional("CEconItemView.GetItemID");
 	MarkNativeAsOptional("CEconItemView.GetQuality");
 	MarkNativeAsOptional("CEconItemView.GetRarity");
 	MarkNativeAsOptional("CEconItemView.GetFlags");
