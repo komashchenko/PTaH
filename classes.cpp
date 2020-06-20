@@ -75,11 +75,11 @@ CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 	if (DefIndex > 0)
 	{
 		//See GetItemDefinitionByMapIndex
-		struct ItemMapMember
+		struct ItemMapMember		// CUtlHashMapLarge<int, CEconItemDefinition*, MurmurHash3Functor<int> >
 		{
-			uint16_t DefIndex;
-			CEconItemDefinition* ItemDefinition;
-			int Unknown;
+			uint16_t iDefIndex;
+			CEconItemDefinition* pItemDefinition;
+			int iHash;
 		};
 
 		ItemMapMember* MapMember = nullptr;
@@ -90,7 +90,7 @@ CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 		{
 			MapMember = (ItemMapMember*)(ItemMap + i * sizeof(ItemMapMember));
 
-			if (MapMember->DefIndex == DefIndex) return MapMember->ItemDefinition;
+			if (MapMember->iDefIndex == DefIndex) return MapMember->pItemDefinition;
 		}
 	}
 
@@ -163,6 +163,74 @@ int CEconItemDefinition::GetNumSupportedStickerSlots()
 	}
 
 	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+const char* CEconItemDefinition::GetEconImage()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetEconImage", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetEconImage offset.");
+
+			return nullptr;
+		}
+	}
+
+	return *(const char**)(this + offset);
+}
+
+const char* CEconItemDefinition::GetViewModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetViewModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetViewModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return *(const char**)(this + offset);
+}
+
+const char* CEconItemDefinition::GetWorldModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetWorldModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetWorldModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return *(const char**)(this + offset);
+}
+
+const char* CEconItemDefinition::GetDroppedModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetDroppedModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetDroppedModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return *(const char**)(this + offset);
 }
 
 const char* CEconItemDefinition::GetClassName()
@@ -333,6 +401,23 @@ int CEconItemView::GetAccountID()
 	}
 
 	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+uint64_t CEconItemView::GetItemID()
+{
+	static int offset = -1;
+
+	if(offset == -1)
+	{
+		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemID", &offset))
+		{
+			smutils->LogError(myself, "Failed to get GetItemID offset.");
+
+			return -1;
+		}
+	}
+
+	return ((uint64_t(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
 int CEconItemView::GetQuality()

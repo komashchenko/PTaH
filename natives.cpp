@@ -471,16 +471,82 @@ static cell_t PTaH_GetNumSupportedStickerSlots(IPluginContext* pContext, const c
 	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
+static cell_t PTaH_GetEconImage(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
+	if (pItemDefinition)
+	{
+		size_t numBytes = 0;
+		const char* sBuf = pItemDefinition->GetEconImage();
+
+		if (sBuf)
+		{
+			pContext->StringToLocalUTF8(params[2], params[3], sBuf, &numBytes);
+		}
+
+		return numBytes;
+	}
+
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
+}
+
+static cell_t PTaH_GetModel(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
+	if (pItemDefinition)
+	{
+		size_t numBytes = 0;
+		const char* sBuf;
+
+		switch (static_cast<PTaH_ModelType>(params[2]))
+		{
+			case ViewModel:
+			{
+				sBuf = pItemDefinition->GetViewModel();
+				break;
+			}
+			case WorldModel:
+			{
+				sBuf = pItemDefinition->GetWorldModel();
+				break;
+			}
+			case DroppedModel:
+			{
+				sBuf = pItemDefinition->GetDroppedModel();
+				break;
+			}
+			default:
+			{
+				return pContext->ThrowNativeError("Invalid PTaH_ModelType value");
+			}
+		}
+
+		if (sBuf)
+		{
+			pContext->StringToLocalUTF8(params[3], params[4], sBuf, &numBytes);
+		}
+
+		return numBytes;
+	}
+
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
+}
+
 static cell_t PTaH_GetClassName(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
 
 	if (pItemDefinition)
 	{
-		size_t numBytes;
+		size_t numBytes = 0;
 		const char* sBuf = pItemDefinition->GetClassName();
 
-		pContext->StringToLocalUTF8(params[2], params[3], sBuf ? sBuf : "", &numBytes);
+		if (sBuf)
+		{
+			pContext->StringToLocalUTF8(params[2], params[3], sBuf, &numBytes);
+		}
 
 		return numBytes;
 	}
@@ -588,6 +654,27 @@ static cell_t PTaH_GetAccountID(IPluginContext* pContext, const cell_t* params)
 	if (pItemView)
 	{
 		return pItemView->GetAccountID();
+	}
+
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
+}
+
+static cell_t PTaH_GetItemID(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
+	if(pItemView)
+	{
+		cell_t *pItemID;
+
+		uint64_t iItemID = pItemView->GetItemID();
+
+		pContext->LocalToPhysAddr(params[2], &pItemID);
+
+		pItemID[0] = iItemID & 0xFFFFFFFF;
+		pItemID[1] = iItemID >> 32;
+
+		return 0;
 	}
 
 	return pContext->ThrowNativeError("CEconItemView == nullptr");
@@ -802,6 +889,8 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },
+	{ "CEconItemDefinition.GetEconImage",					PTaH_GetEconImage },
+	{ "CEconItemDefinition.GetModel",						PTaH_GetModel },
 	{ "CEconItemDefinition.GetClassName",					PTaH_GetClassName },
 	{ "CEconItemView.GetCustomPaintKitIndex",				PTaH_GetCustomPaintKitIndex },
 	{ "CEconItemView.GetCustomPaintKitSeed",				PTaH_GetCustomPaintKitSeed },
@@ -810,6 +899,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemView.IsTradable",							PTaH_IsTradable },
 	{ "CEconItemView.IsMarketable",							PTaH_IsMarketable },
 	{ "CEconItemView.GetItemDefinition",					PTaH_GetItemDefinition },
+	{ "CEconItemView.GetItemID",							PTaH_GetItemID },
 	{ "CEconItemView.GetAccountID",							PTaH_GetAccountID },
 	{ "CEconItemView.GetQuality",							PTaH_GetQuality },
 	{ "CEconItemView.GetRarity",							PTaH_GetRarity },

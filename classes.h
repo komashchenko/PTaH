@@ -72,6 +72,10 @@ public:
 	uint16_t GetDefinitionIndex();
 	int GetLoadoutSlot(int iTeam);
 	int GetNumSupportedStickerSlots();
+	const char* GetEconImage();
+	const char* GetViewModel();
+	const char* GetWorldModel();
+	const char* GetDroppedModel();
 	const char* GetClassName();
 };
 
@@ -108,6 +112,7 @@ public:
 	bool IsMarketable();
 	CEconItemDefinition* GetItemDefinition();
 	int GetAccountID();
+	uint64_t GetItemID();
 	int GetQuality();
 	int GetRarity();
 	int GetFlags();

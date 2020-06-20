@@ -66,6 +66,13 @@ enum PTaH_HookEvent
 	PTaH_MAXHOOKS
 };
 
+enum PTaH_ModelType
+{
+	ViewModel = 0,
+	WorldModel,
+	DroppedModel
+};
+
 /**
  * @brief Sample implementation of the SDK Extension.
  * Note: Uncomment one of the pre-defined virtual functions in order to use it.
