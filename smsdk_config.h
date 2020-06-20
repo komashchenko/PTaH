@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -29,8 +29,8 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"PTaH"
 #define SMEXT_CONF_DESCRIPTION	"Additional CS:GO Hooks and Natives"
-#define SMEXT_CONF_VERSION		"1.1.1"
-#define PTaH_VERSION			101010
+#define SMEXT_CONF_VERSION		"1.1.2"
+#define PTaH_VERSION			101020
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
 #define SMEXT_CONF_URL			"https://zizt.ru/ | https://hlmod.ru"
 #define SMEXT_CONF_LOGTAG		"PTaH"

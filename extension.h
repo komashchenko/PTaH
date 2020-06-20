@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -61,8 +61,16 @@ enum PTaH_HookEvent
 	PTaH_ExecuteStringCommandPost,
 	PTaH_ClientConnectPre,
 	PTaH_ClientConnectPost,
+	PTaH_InventoryUpdatePost = 25,
 
 	PTaH_MAXHOOKS
+};
+
+enum PTaH_ModelType
+{
+	ViewModel = 0,
+	WorldModel,
+	DroppedModel
 };
 
 /**
@@ -147,7 +155,7 @@ public:
 #define GameConf_PTaH 2
 #define GameConf_CSST 3
 
-extern IGameConfig * g_pGameConf[4];
+extern IGameConfig* g_pGameConf[4];
 extern ISDKTools* sdktools;
 extern IServer* iserver;
 extern IVoiceServer* voiceserver;

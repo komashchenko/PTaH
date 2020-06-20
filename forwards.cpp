@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -52,6 +52,9 @@ SH_DECL_MANUALHOOK1(ExecuteStringCommand, 0, 0, 0, bool, const char*);
 SH_DECL_MANUALHOOK13(ConnectClient, 0, 0, 0, IClient*, const netadr_t&, int, int, int, const char*, const char*, const char*, int, CUtlVector<NetMsg_SplitPlayerConnect*>&, bool, CrossPlayPlatform_t, const unsigned char*, int);
 SH_DECL_MANUALHOOK1_void_vafmt(RejectConnection, 0, 0, 0, const netadr_t&);
 
+//InventoryUpdate
+SH_DECL_MANUALHOOK0_void(SendInventoryUpdateEvent, 0, 0, 0);
+
 
 void CForwardManager::Init()
 {
@@ -69,6 +72,7 @@ void CForwardManager::Init()
 	ExecuteStringCommandPost.Init();
 	ClientConnectPre.Init();
 	ClientConnectPost.Init();
+	InventoryUpdatePost.Init();
 
 	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CForwardManager::LevelShutdown), true);
 
@@ -102,6 +106,7 @@ void CForwardManager::Shutdown()
 	ExecuteStringCommandPost.Shutdown();
 	ClientConnectPre.Shutdown();
 	ClientConnectPost.Shutdown();
+	InventoryUpdatePost.Shutdown();
 }
 
 bool CForwardManager::FunctionUpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook)
@@ -122,6 +127,7 @@ bool CForwardManager::FunctionUpdateHook(PTaH_HookEvent htType, IPluginFunction*
 	case PTaH_ExecuteStringCommandPost: return ExecuteStringCommandPost.UpdateForward(pFunction, bHook);
 	case PTaH_ClientConnectPre: return ClientConnectPre.UpdateForward(pFunction, bHook);
 	case PTaH_ClientConnectPost: return ClientConnectPost.UpdateForward(pFunction, bHook);
+	case PTaH_InventoryUpdatePost: return InventoryUpdatePost.UpdateForward(pFunction, bHook);
 	}
 
 	return false;
@@ -153,6 +159,7 @@ void CForwardManager::OnClientPutInServer(int iClient)
 	WeaponCanUsePost.HookClient(iClient);
 	SetPlayerModelPre.HookClient(iClient);
 	SetPlayerModelPost.HookClient(iClient);
+	InventoryUpdatePost.Hook(iClient);
 }
 
 void CForwardManager::OnClientDisconnected(int iClient)
@@ -181,6 +188,12 @@ void CForwardManager::OnPluginUnloaded(IPlugin* plugin)
 	ExecuteStringCommandPost.UpdateHook();
 	ClientConnectPre.UpdateHook();
 	ClientConnectPost.UpdateHook();
+	InventoryUpdatePost.UpdateHook();
+}
+
+CForwardManager::TempleHookClient::TempleHookClient()
+{
+	memset(iHookId, 0xFF, sizeof(iHookId));
 }
 
 void CForwardManager::TempleHookClient::Shutdown()
@@ -190,7 +203,7 @@ void CForwardManager::TempleHookClient::Shutdown()
 
 void CForwardManager::TempleHookClient::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -249,8 +262,7 @@ bool CForwardManager::TempleHookClient::UpdateForward(IPluginFunction* pFunc, bo
 	return false;
 }
 
-
-void CForwardManager::TempleHookCGameClient::Shutdown()
+void CForwardManager::TempleHookVP::Shutdown()
 {
 	if (iOffset != -1)
 	{
@@ -260,18 +272,7 @@ void CForwardManager::TempleHookCGameClient::Shutdown()
 	}
 }
 
-void CForwardManager::TempleHookCGameClient::Hook(int iClient)
-{
-	if (bHooked && iHookId == -1)
-	{
-		IClient* pClient = iserver->GetClient(iClient - 1);
-		CGameClient* pGameClient = __IClientToGameClient(pClient);
-
-		iHookId = __SH_ADD_MANUALVPHOOK(pGameClient);
-	}
-}
-
-bool CForwardManager::TempleHookCGameClient::UpdateForward(IPluginFunction* pFunc, bool bHook)
+bool CForwardManager::TempleHookVP::UpdateForward(IPluginFunction* pFunc, bool bHook)
 {
 	if (iOffset != -1)
 	{
@@ -288,9 +289,9 @@ bool CForwardManager::TempleHookCGameClient::UpdateForward(IPluginFunction* pFun
 	return false;
 }
 
-void CForwardManager::TempleHookCGameClient::UpdateHook()
+void CForwardManager::TempleHookVP::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -299,7 +300,9 @@ void CForwardManager::TempleHookCGameClient::UpdateHook()
 			IGamePlayer* pPlayer;
 			int iMaxClients = playerhelpers->GetMaxClients();
 
-			for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && pPlayer->IsConnected())
+			auto fPlayerValid = bInGame ? &IGamePlayer::IsInGame : &IGamePlayer::IsConnected;
+
+			for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && (pPlayer->*fPlayerValid)())
 			{
 				Hook(i);
 
@@ -312,6 +315,17 @@ void CForwardManager::TempleHookCGameClient::UpdateHook()
 
 			iHookId = -1;
 		}
+	}
+}
+
+void CForwardManager::TempleHookCGameClient::Hook(int iClient)
+{
+	if (bHooked && iHookId == -1)
+	{
+		IClient* pClient = iserver->GetClient(iClient - 1);
+		CGameClient* pGameClient = __IClientToGameClient(pClient);
+
+		iHookId = __SH_ADD_MANUALVPHOOK(pGameClient);
 	}
 }
 
@@ -431,7 +445,7 @@ void CForwardManager::GiveNamedItemPre::Shutdown()
 
 void CForwardManager::GiveNamedItemPre::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -665,7 +679,7 @@ bool CForwardManager::ClientVoiceToPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientVoiceToPre::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -762,7 +776,7 @@ bool CForwardManager::ClientVoiceToPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientVoiceToPost::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -920,7 +934,7 @@ void CForwardManager::ClientConnectPre::Init()
 
 			pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
 		}
-		else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPost will be unavailable.");
+		else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPre will be unavailable.");
 	}
 	else smutils->LogError(myself, "Failed to get RejectConnection offset, Hook ClientConnectPre will be unavailable.");
 }
@@ -954,7 +968,7 @@ bool CForwardManager::ClientConnectPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientConnectPre::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1072,7 +1086,7 @@ bool CForwardManager::ClientConnectPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientConnectPost::UpdateHook()
 {
-	if (pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1108,4 +1122,43 @@ IClient* CForwardManager::ClientConnectPost::SHHook(const netadr_t& address, int
 	}
 
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
+}
+
+CForwardManager::SendInventoryUpdateEventPost::SendInventoryUpdateEventPost()
+{
+	bInGame = true;
+}
+
+void CForwardManager::SendInventoryUpdateEventPost::Init()
+{
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("SendInventoryUpdateEvent", &iOffset))
+	{
+		SH_MANUALHOOK_RECONFIGURE(SendInventoryUpdateEvent, iOffset, 0, 0);
+
+		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_Cell);
+	}
+	else smutils->LogError(myself, "Failed to get SendInventoryUpdateEvent offset, Hook InventoryUpdatePost will be unavailable.");
+}
+
+void CForwardManager::SendInventoryUpdateEventPost::Hook(int iClient)
+{
+	if (bHooked && iHookId == -1)
+	{
+		CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(iClient);
+
+		CCSPlayerInventory* pPlayerInventory = CCSPlayerInventory::FromPlayer(pEntity);
+
+		iHookId = SH_ADD_MANUALVPHOOK(SendInventoryUpdateEvent, pPlayerInventory, SH_MEMBER(this, &CForwardManager::SendInventoryUpdateEventPost::SHHook), true);
+	}
+}
+
+void CForwardManager::SendInventoryUpdateEventPost::SHHook()
+{
+	CCSPlayerInventory* pPlayerInventory = META_IFACEPTR(CCSPlayerInventory);
+
+	pForward->PushCell(gamehelpers->EntityToBCompatRef(pPlayerInventory->ToPlayer()));
+	pForward->PushCell(reinterpret_cast<cell_t>(pPlayerInventory));
+	pForward->Execute(nullptr);
+
+	RETURN_META(MRES_IGNORED);
 }

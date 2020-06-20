@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
- * Copyright (C) 2016-2019 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+ * Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
  * =============================================================================
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -58,6 +58,8 @@ public: // IPluginsListener
 	class TempleHookClient
 	{
 	public:
+		TempleHookClient();
+
 		virtual void Shutdown();
 		void HookClient(int iClient);
 		void UnHookClient(int iClient);
@@ -69,29 +71,38 @@ public: // IPluginsListener
 
 		IChangeableForward* pForward = nullptr;
 
-		int iHookId[SM_MAXPLAYERS + 1] = { -1 };
+		int iHookId[SM_MAXPLAYERS + 1];
 		bool bHooked = false;
 		int iOffset = -1;
 	};
 
-	class TempleHookCGameClient
+	class TempleHookVP
 	{
 	public:
 		void Shutdown();
-		void Hook(int iClient);
+		virtual void Hook(int iClient) = 0;
 		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
 		void UpdateHook();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) = 0; //Crutch
-		inline CGameClient* __IClientToGameClient(IClient* pClient);
-		inline IClient* __GameClientToIClient(CGameClient* pGameClient);
-
 		IChangeableForward* pForward = nullptr;
 
 		int iHookId = -1;
 		bool bHooked = false;
 		int iOffset = -1;
+
+		bool bInGame = false;
+	};
+
+	class TempleHookCGameClient : public TempleHookVP
+	{
+	public:
+		virtual void Hook(int iClient) override;
+
+	protected:
+		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) = 0; //Crutch
+		inline CGameClient* __IClientToGameClient(IClient* pClient);
+		inline IClient* __GameClientToIClient(CGameClient* pGameClient);
 	};
 
 	class GiveNamedItemPre : public TempleHookClient
@@ -180,7 +191,7 @@ public: // IPluginsListener
 
 		IChangeableForward* pForward = nullptr;
 
-		bool bStartVoice[SM_MAXPLAYERS + 1] = { false };
+		bool bStartVoice[SM_MAXPLAYERS + 1] = { };
 		bool bHooked = false;
 	} ClientVoiceToPre;
 
@@ -279,6 +290,18 @@ public: // IPluginsListener
 		int iOffset = -1;
 		int iHookId = -1;
 	} ClientConnectPost;
+
+	class SendInventoryUpdateEventPost : public TempleHookVP
+	{
+	public:
+		SendInventoryUpdateEventPost();
+
+		void Init();
+		virtual void Hook(int iClient) override;
+
+	protected:
+		void SHHook();
+	} InventoryUpdatePost;
 };
 
 extern CForwardManager g_ForwardManager;
