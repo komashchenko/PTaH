@@ -64,9 +64,9 @@ CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinitionByDefIndex", &offset))
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemSchema::m_mapItems", &offset))
 		{
-			smutils->LogError(myself, "Failed to get GetItemDefinitionByDefIndex offset.");
+			smutils->LogError(myself, "Failed to get CEconItemSchema::m_mapItems offset.");
 
 			return nullptr;
 		}
@@ -103,9 +103,9 @@ CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByDefIndex(
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetAttributeDefinitionInterface", &offset))
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemSchema::GetAttributeDefinitionInterface", &offset))
 		{
-			smutils->LogError(myself, "Failed to get GetAttributeDefinitionInterface offset.");
+			smutils->LogError(myself, "Failed to get CEconItemSchema::GetAttributeDefinitionInterface offset.");
 
 			return nullptr;
 		}
@@ -114,32 +114,15 @@ CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByDefIndex(
 	return ((CEconItemAttributeDefinition*(VCallingConvention*)(void*, uint16_t))(*(void***)this)[offset])(this, DefIndex);
 }
 
-uint16_t CEconItemDefinition::GetDefinitionIndex()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetDefinitionIndex", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetDefinitionIndex offset.");
-
-			return 0;
-		}
-	}
-
-	return ((uint16_t(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
 int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 {
 	static int (VCallingConvention* GetLoadoutSlot)(void*, int) = nullptr;
 
 	if (GetLoadoutSlot == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("GetLoadoutSlot", (void**)&GetLoadoutSlot))
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CCStrike15ItemDefinition::GetLoadoutSlot", (void**)&GetLoadoutSlot))
 		{
-			smutils->LogError(myself, "Failed to get GetLoadoutSlot function.");
+			smutils->LogError(myself, "Failed to get CCStrike15ItemDefinition::GetLoadoutSlot function.");
 
 			return -1;
 		}
@@ -154,9 +137,9 @@ int CEconItemDefinition::GetNumSupportedStickerSlots()
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetNumSupportedStickerSlots", &offset))
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::GetNumSupportedStickerSlots", &offset))
 		{
-			smutils->LogError(myself, "Failed to get GetNumSupportedStickerSlots offset.");
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::GetNumSupportedStickerSlots offset.");
 
 			return -1;
 		}
@@ -165,310 +148,89 @@ int CEconItemDefinition::GetNumSupportedStickerSlots()
 	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
-const char* CEconItemDefinition::GetEconImage()
+const char* CEconItemDefinition::GetInventoryImage()
 {
 	static int offset = -1;
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetEconImage", &offset))
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::GetInventoryImage", &offset))
 		{
-			smutils->LogError(myself, "Failed to get GetEconImage offset.");
-
-			return nullptr;
-		}
-	}
-
-	return *(const char**)(this + offset);
-}
-
-const char* CEconItemDefinition::GetViewModel()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetViewModel", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetViewModel offset.");
-
-			return nullptr;
-		}
-	}
-
-	return *(const char**)(this + offset);
-}
-
-const char* CEconItemDefinition::GetWorldModel()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetWorldModel", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetWorldModel offset.");
-
-			return nullptr;
-		}
-	}
-
-	return *(const char**)(this + offset);
-}
-
-const char* CEconItemDefinition::GetDroppedModel()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetDroppedModel", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetDroppedModel offset.");
-
-			return nullptr;
-		}
-	}
-
-	return *(const char**)(this + offset);
-}
-
-const char* CEconItemDefinition::GetClassName()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetClassName", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetClassName offset.");
-
-			return nullptr;
-		}
-	}
-
-	return *(const char**)(this + offset);
-}
-
-int CEconItemView::GetCustomPaintKitIndex()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitIndex", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitIndex offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-int CEconItemView::GetCustomPaintKitSeed()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitSeed", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitSeed offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-float CEconItemView::GetCustomPaintKitWear(float def)
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomPaintKitWear", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetCustomPaintKitWear offset.");
-
-			return def;
-		}
-	}
-
-	return ((float(VCallingConvention*)(void*, float))(*(void***)this)[offset])(this, def);
-}
-
-float CEconItemView::GetStickerAttributeBySlotIndexFloat(int slot, EStickerAttributeType StickerAttribut, float def)
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexFloat", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexFloat offset.");
-
-			return def;
-		}
-	}
-
-	return ((float(VCallingConvention*)(void*, int, EStickerAttributeType, float))(*(void***)this)[offset])(this, slot, StickerAttribut, def);
-}
-
-int CEconItemView::GetStickerAttributeBySlotIndexInt(int slot, EStickerAttributeType StickerAttribut, int def)
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetStickerAttributeBySlotIndexInt", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetStickerAttributeBySlotIndexInt offset.");
-
-			return def;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*, int, EStickerAttributeType, int))(*(void***)this)[offset])(this, slot, StickerAttribut, def);
-}
-
-bool CEconItemView::IsTradable()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IsTradable", &offset))
-		{
-			smutils->LogError(myself, "Failed to get IsTradable offset.");
-
-			return false;
-		}
-	}
-
-	return ((bool(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-bool CEconItemView::IsMarketable()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IsMarketable", &offset))
-		{
-			smutils->LogError(myself, "Failed to get IsMarketable offset.");
-
-			return false;
-		}
-	}
-
-	return ((bool(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-CEconItemDefinition* CEconItemView::GetItemDefinition()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemDefinition", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetItemDefinition offset.");
-
-			return nullptr;
-		}
-	}
-
-	return ((CEconItemDefinition*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-int CEconItemView::GetQuality()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetQuality", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetQuality offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-int CEconItemView::GetRarity()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetRarity", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetRarity offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-int CEconItemView::GetFlags()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetFlags", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetFlags offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-int CEconItemView::GetOrigin()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetOrigin", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetOrigin offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-const char* CEconItemView::GetCustomName()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetCustomName", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetCustomName offset.");
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::GetInventoryImage offset.");
 
 			return nullptr;
 		}
 	}
 
 	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+const char* CEconItemDefinition::GetBasePlayerDisplayModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::GetBasePlayerDisplayModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::GetBasePlayerDisplayModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+const char* CEconItemDefinition::GetWorldDisplayModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::GetWorldDisplayModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::GetWorldDisplayModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+const char* CEconItemDefinition::GetWorldDroppedModel()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::GetWorldDroppedModel", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::GetWorldDroppedModel offset.");
+
+			return nullptr;
+		}
+	}
+
+	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+}
+
+const char* CEconItemDefinition::GetDefinitionName()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemDefinition::m_pszDefinitionName", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CEconItemDefinition::m_pszDefinitionName offset.");
+
+			return nullptr;
+		}
+	}
+
+	return *(const char**)((intptr_t)this + offset);
 }
 
 // Thank you Kailo
@@ -487,23 +249,6 @@ int CEconItemView::GetKillEaterValue()
 	else smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
 
 	return -1;
-}
-
-void CEconItemView::IterateAttributes(IEconItemAttributeIterator* AttributeIterator)
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("IterateAttributes", &offset))
-		{
-			smutils->LogError(myself, "Failed to get IterateAttributes offset.");
-
-			return;
-		}
-	}
-
-	((void(VCallingConvention*)(void*, IEconItemAttributeIterator*))(*(void***)this)[offset])(this, AttributeIterator);
 }
 
 void* CPlayerVoiceListener::operator new(size_t) throw()
@@ -592,15 +337,15 @@ CEconItemView* CCSPlayerInventory::GetItemInLoadout(int iTeam, int iLoadoutSlot)
 	return ((CEconItemView*(VCallingConvention*)(void*, int, int))(*(void***)this)[offset])(this, iTeam, iLoadoutSlot);
 }
 
-CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItems()
+CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItemVector()
 {
 	static int offset = -1;
 
 	if (offset == -1)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("InventoryItems", &offset))
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CPlayerInventory::m_vecInventoryItems", &offset))
 		{
-			smutils->LogError(myself, "Failed to get InventoryItems offset.");
+			smutils->LogError(myself, "Failed to get CPlayerInventory::m_vecInventoryItems offset.");
 
 			return nullptr;
 		}

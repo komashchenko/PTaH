@@ -23,6 +23,7 @@
 
 class CAttribute_String;
 class stickerMaterialReference_t;
+enum eEconItemOrigin;
 
 enum EStickerAttributeType
 {
@@ -70,14 +71,20 @@ public:
 class CEconItemDefinition
 {
 public:
-	uint16_t GetDefinitionIndex();
+	uint16 GetDefinitionIndex() { return m_nDefIndex; }
 	int GetLoadoutSlot(int iTeam);
 	int GetNumSupportedStickerSlots();
-	const char* GetEconImage();
-	const char* GetViewModel();
-	const char* GetWorldModel();
-	const char* GetDroppedModel();
-	const char* GetClassName();
+	const char* GetInventoryImage();
+	const char* GetBasePlayerDisplayModel();
+	const char* GetWorldDisplayModel();
+	const char* GetWorldDroppedModel();
+	const char* GetDefinitionName();
+
+private:
+	void* m_pVTable; //0
+public:
+	KeyValues* m_pKVItem; //4
+	uint16 m_nDefIndex; //8
 };
 
 class CEconItemSchema
@@ -162,44 +169,56 @@ public:
 	void RemoveAttribute(int iIndex) { m_Attributes.Remove(iIndex); }
 	void RemoveAttributeByDefIndex(uint16_t unAttrDefIndex);
 	void SetOrAddAttributeValue(uint16_t unAttrDefIndex, uint32_t unValue);
-	int	 GetNumAttributes() { return m_Attributes.Count(); }
+	int GetNumAttributes() { return m_Attributes.Count(); }
 	CEconItemAttribute& GetAttribute(int iIndex) { return m_Attributes[iIndex]; }
 	CEconItemAttribute* GetAttributeByDefIndex(uint16_t unAttrDefIndex);
 
 private:
-	void* m_pVTable;
+	void* m_pVTable; //0
 #ifdef PLATFORM_WINDOWS
-	CUtlVector<CEconItemAttribute, CUtlMemoryGlobalMalloc<CEconItemAttribute> > m_Attributes;
+	CUtlVector<CEconItemAttribute, CUtlMemoryGlobalMalloc<CEconItemAttribute> > m_Attributes; //4 (20)
 #else
-	CUtlVector<CEconItemAttribute> m_Attributes;
+	CUtlVector<CEconItemAttribute> m_Attributes; //4 (20)
 #endif
-	void* m_pAttributeManager;
+	void* m_pAttributeManager; //24
 };
 
+#pragma pack(push, 4)
 class CEconItemView
 {
+	virtual ~CEconItemView() = 0;
 public:
-	int GetCustomPaintKitIndex();
-	int GetCustomPaintKitSeed();
-	float GetCustomPaintKitWear(float def);
-	float GetStickerAttributeBySlotIndexFloat(int slot, EStickerAttributeType StickerAttribut, float def);
-	int GetStickerAttributeBySlotIndexInt(int slot, EStickerAttributeType StickerAttribut, int def);
-	bool IsTradable();
-	bool IsMarketable();
-	CEconItemDefinition* GetItemDefinition();
+	virtual int GetCustomPaintKitIndex() const = 0;
+	virtual int GetCustomPaintKitSeed() const = 0;
+	virtual float GetCustomPaintKitWear(float flWearDefault = 0.0f) const = 0;
+	virtual float GetStickerAttributeBySlotIndexFloat(int nSlotIndex, EStickerAttributeType type, float flDefault) const = 0;
+	virtual uint32 GetStickerAttributeBySlotIndexInt(int nSlotIndex, EStickerAttributeType type, uint32 uiDefault) const = 0;
+	virtual bool IsTradable() const = 0;
+	virtual bool IsMarketable() const = 0;
+	virtual bool IsCommodity() const = 0;
+	virtual bool IsUsableInCrafting() const = 0;
+	virtual bool IsHiddenFromDropList() const = 0;
+	virtual RTime32 GetExpirationDate() const = 0;
+	virtual CEconItemDefinition* GetItemDefinition() const = 0;
+	virtual uint32 GetAccountID() const = 0;
+	virtual uint64 GetItemID() const = 0;
+	virtual int32 GetQuality() const = 0;
+	virtual int32 GetRarity() const = 0;
+	virtual uint8 GetFlags() const = 0;
+	virtual eEconItemOrigin GetOrigin() const = 0;
+	virtual uint16 GetQuantity() const = 0;
+	virtual uint32 GetItemLevel() const = 0;
+	virtual bool GetInUse() const = 0;
+	virtual const char* GetCustomName() const = 0;
+	virtual const char* GetCustomDesc() const = 0;
+	virtual int GetItemSetIndex() const = 0;
+	virtual void IterateAttributes(IEconItemAttributeIterator* pIterator) const = 0;
+
 	uint32 GetAccountID() { return m_iAccountID; }
 	uint64 GetItemID() { return m_iItemID; }
-	int GetQuality();
-	int GetRarity();
-	int GetFlags();
-	int GetOrigin();
-	const char* GetCustomName();
 	int GetKillEaterValue();
 
-	void IterateAttributes(IEconItemAttributeIterator* AttributeIterator);
-
 private:
-	void* m_pVTable; //0
 	bool m_bKillEaterTypesCached; //4
 	void* m_vCachedKillEaterTypes[7]; //8 (28)
 	int m_nKillEaterValuesCacheFrame; //36
@@ -226,6 +245,7 @@ public:
 	void* m_autoptrInventoryImageGeneratedPath; //508
 };
 static_assert(sizeof(CEconItemView) == 512, "CEconItemView - incorrect size on this compiler");
+#pragma pack(pop)
 
 class IEconItemUntypedAttributeIterator : public IEconItemAttributeIterator
 {
@@ -308,7 +328,7 @@ public:
 	CBaseEntity* ToPlayer();
 
 	CEconItemView* GetItemInLoadout(int iTeam, int iLoadoutSlot);
-	CUtlVector<CEconItemView*>* GetItems();
+	CUtlVector<CEconItemView*>* GetItemVector();
 };
 
 
