@@ -321,7 +321,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 	Angles.y = sp_ctof(source_angles[1]);
 	Angles.z = sp_ctof(source_angles[2]);
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	static CBaseEntity* (__stdcall* SpawnItem)(uint16_t, Vector*, QAngle*, int, int, int) = nullptr;
 #else
 	static CBaseEntity* (__cdecl* SpawnItem)(void*, uint16_t, Vector*, QAngle*, int, int, int) = nullptr;
@@ -339,7 +339,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 
 	CBaseEntity* pItem;
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	pItem = SpawnItem(params[1], &Origin, &Angles, 1, 4, 0);
 #else
 	pItem = SpawnItem(nullptr, params[1], &Origin, &Angles, 1, 4, 0);
@@ -393,7 +393,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	Angles.y = sp_ctof(source_angles[1]);
 	Angles.z = sp_ctof(source_angles[2]);
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	//Very similar to __fastcall, but does not clean stack.
 	static void (__fastcall* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
 #else
@@ -425,7 +425,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	*bLagCompensation = false;
 
 	FX_FireBullets(params[1], nullptr, pItemView, &Origin, &Angles, params[5], params[6], sp_ctof(params[7]), sp_ctof(params[8]), sp_ctof(params[9]), 0.f, params[10], sp_ctof(params[11]));
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	//Clearing stack after call.
 	__asm add esp, 2Ch
 #endif
@@ -810,6 +810,30 @@ static cell_t PTaH_GetAttributeValueByIndex(IPluginContext* pContext, const cell
 	return pContext->ThrowNativeError("CEconItemView == nullptr");
 }
 
+static cell_t CEconItemView_AttributeList_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
+	if (pItemView)
+	{
+		return reinterpret_cast<cell_t>(&pItemView->m_AttributeList);
+	}
+
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
+}
+
+static cell_t CEconItemView_NetworkedDynamicAttributesForDemos_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[1]);
+
+	if (pItemView)
+	{
+		return reinterpret_cast<cell_t>(&pItemView->m_NetworkedDynamicAttributesForDemos);
+	}
+
+	return pContext->ThrowNativeError("CEconItemView == nullptr");
+}
+
 static cell_t PTaH_GetItemInLoadout(IPluginContext* pContext, const cell_t* params)
 {
 	CCSPlayerInventory* pPlayerInventory = reinterpret_cast<CCSPlayerInventory*>(params[1]);
@@ -873,46 +897,279 @@ static cell_t PTaH_GetItem(IPluginContext* pContext, const cell_t* params)
 	return pContext->ThrowNativeError("CCSPlayerInventory == nullptr");
 }
 
+static cell_t CAttributeList_DestroyAllAttributes(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		pAttributeList->DestroyAllAttributes();
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_GetAttributesCount(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		return pAttributeList->GetNumAttributes();
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_GetAttribute(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		int iIndex = params[2];
+
+		if (iIndex >= 0 && iIndex < pAttributeList->GetNumAttributes())
+		{
+			CEconItemAttribute& pAttribute = pAttributeList->GetAttribute(iIndex);
+
+			return reinterpret_cast<cell_t>(&pAttribute);
+		}
+		else
+		{
+			return pContext->ThrowNativeError("Attribute index %d is invalid", iIndex);
+		}
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_GetAttributeByDefIndex(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		CEconItemAttribute* pAttribute = pAttributeList->GetAttributeByDefIndex(params[2]);
+
+		return reinterpret_cast<cell_t>(pAttribute);
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_RemoveAttribute(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		int iIndex = params[2];
+
+		if (iIndex >= 0 && iIndex < pAttributeList->GetNumAttributes())
+		{
+			pAttributeList->RemoveAttribute(iIndex);
+
+			return 0;
+		}
+		else
+		{
+			return pContext->ThrowNativeError("Attribute index %d is invalid", iIndex);
+		}
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_RemoveAttributeByDefIndex(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		pAttributeList->RemoveAttributeByDefIndex(params[2]);
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CAttributeList_SetOrAddAttributeValue(IPluginContext* pContext, const cell_t* params)
+{
+	CAttributeList* pAttributeList = reinterpret_cast<CAttributeList*>(params[1]);
+
+	if (pAttributeList)
+	{
+		pAttributeList->SetOrAddAttributeValue(params[2], params[3]);
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CAttributeList == nullptr");
+}
+
+static cell_t CEconItemAttribute_DefinitionIndex_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		return pAttribute->m_iAttributeDefinitionIndex;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_Value_set(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		pAttribute->m_flValue = sp_ctof(params[2]);
+
+		return 0;
+	}
+	
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_Value_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		return sp_ftoc(pAttribute->m_flValue);
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_InitialValue_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		return sp_ftoc(pAttribute->m_flInitialValue);
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_RefundableCurrency_set(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		pAttribute->m_nRefundableCurrency = params[2];
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_RefundableCurrency_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		return pAttribute->m_nRefundableCurrency;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_SetBonus_set(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		pAttribute->m_bSetBonus = static_cast<bool>(params[2]);
+
+		return 0;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
+static cell_t CEconItemAttribute_SetBonus_get(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttribute* pAttribute = reinterpret_cast<CEconItemAttribute*>(params[1]);
+
+	if (pAttribute)
+	{
+		return pAttribute->m_bSetBonus;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
+}
+
 
 extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
-	{ "PTaH_Version",										PTaH_Version },
-	{ "PTaH",												PTaH_ },
-	{ "PTaH_GetItemDefinitionByName",						PTaH_GetItemDefinitionByName },
-	{ "PTaH_GetItemDefinitionByDefIndex",					PTaH_GetItemDefinitionByDefIndex },
-	{ "PTaH_GetEconItemViewFromEconEntity",					PTaH_GetEconItemViewFromEconEntity },
-	{ "PTaH_GetPlayerInventory",							PTaH_GetPlayerInventory },
-	{ "PTaH_GivePlayerItem",								PTaH_GivePlayerItem },
-	{ "PTaH_ForceFullUpdate",								PTaH_ForceFullUpdate },
-	{ "PTaH_SpawnItemFromDefIndex",							PTaH_SpawnItemFromDefIndex },
-	{ "PTaH_FX_FireBullets",								PTaH_FX_FireBullets },
-	{ "CEconItemDefinition.GetDefinitionIndex",				PTaH_GetDefinitionIndex },
-	{ "CEconItemDefinition.GetLoadoutSlot",					PTaH_GetLoadoutSlot },
-	{ "CEconItemDefinition.GetNumSupportedStickerSlots",	PTaH_GetNumSupportedStickerSlots },
-	{ "CEconItemDefinition.GetEconImage",					PTaH_GetEconImage },
-	{ "CEconItemDefinition.GetModel",						PTaH_GetModel },
-	{ "CEconItemDefinition.GetClassName",					PTaH_GetClassName },
-	{ "CEconItemView.GetCustomPaintKitIndex",				PTaH_GetCustomPaintKitIndex },
-	{ "CEconItemView.GetCustomPaintKitSeed",				PTaH_GetCustomPaintKitSeed },
-	{ "CEconItemView.GetCustomPaintKitWear",				PTaH_GetCustomPaintKitWear },
-	{ "CEconItemView.GetStickerAttributeBySlotIndex",		PTaH_GetStickerAttributeBySlotIndex },
-	{ "CEconItemView.IsTradable",							PTaH_IsTradable },
-	{ "CEconItemView.IsMarketable",							PTaH_IsMarketable },
-	{ "CEconItemView.GetItemDefinition",					PTaH_GetItemDefinition },
-	{ "CEconItemView.GetItemID",							PTaH_GetItemID },
-	{ "CEconItemView.GetAccountID",							PTaH_GetAccountID },
-	{ "CEconItemView.GetQuality",							PTaH_GetQuality },
-	{ "CEconItemView.GetRarity",							PTaH_GetRarity },
-	{ "CEconItemView.GetFlags",								PTaH_GetFlags },
-	{ "CEconItemView.GetOrigin",							PTaH_GetOrigin },
-	{ "CEconItemView.GetCustomName",						PTaH_GetCustomName },
-	{ "CEconItemView.GetStatTrakKill",						PTaH_GetKillEater },
-	{ "CEconItemView.GetAttributeValueByIndex",				PTaH_GetAttributeValueByIndex },
-	{ "CCSPlayerInventory.GetItemInLoadout",				PTaH_GetItemInLoadout },
-	{ "CCSPlayerInventory.GetItemsCount",					PTaH_GetItemsCount },
-	{ "CCSPlayerInventory.GetItem",							PTaH_GetItem },
+	{ "PTaH_Version",											PTaH_Version },
+	{ "PTaH",													PTaH_ },
+	{ "PTaH_GetItemDefinitionByName",							PTaH_GetItemDefinitionByName },
+	{ "PTaH_GetItemDefinitionByDefIndex",						PTaH_GetItemDefinitionByDefIndex },
+	{ "PTaH_GetEconItemViewFromEconEntity",						PTaH_GetEconItemViewFromEconEntity },
+	{ "PTaH_GetPlayerInventory",								PTaH_GetPlayerInventory },
+	{ "PTaH_GivePlayerItem",									PTaH_GivePlayerItem },
+	{ "PTaH_ForceFullUpdate",									PTaH_ForceFullUpdate },
+	{ "PTaH_SpawnItemFromDefIndex",								PTaH_SpawnItemFromDefIndex },
+	{ "PTaH_FX_FireBullets",									PTaH_FX_FireBullets },
+	{ "CEconItemDefinition.GetDefinitionIndex",					PTaH_GetDefinitionIndex },
+	{ "CEconItemDefinition.GetLoadoutSlot",						PTaH_GetLoadoutSlot },
+	{ "CEconItemDefinition.GetNumSupportedStickerSlots",		PTaH_GetNumSupportedStickerSlots },
+	{ "CEconItemDefinition.GetEconImage",						PTaH_GetEconImage },
+	{ "CEconItemDefinition.GetModel",							PTaH_GetModel },
+	{ "CEconItemDefinition.GetClassName",						PTaH_GetClassName },
+	{ "CEconItemView.GetCustomPaintKitIndex",					PTaH_GetCustomPaintKitIndex },
+	{ "CEconItemView.GetCustomPaintKitSeed",					PTaH_GetCustomPaintKitSeed },
+	{ "CEconItemView.GetCustomPaintKitWear",					PTaH_GetCustomPaintKitWear },
+	{ "CEconItemView.GetStickerAttributeBySlotIndex",			PTaH_GetStickerAttributeBySlotIndex },
+	{ "CEconItemView.IsTradable",								PTaH_IsTradable },
+	{ "CEconItemView.IsMarketable",								PTaH_IsMarketable },
+	{ "CEconItemView.GetItemDefinition",						PTaH_GetItemDefinition },
+	{ "CEconItemView.GetItemID",								PTaH_GetItemID },
+	{ "CEconItemView.GetAccountID",								PTaH_GetAccountID },
+	{ "CEconItemView.GetQuality",								PTaH_GetQuality },
+	{ "CEconItemView.GetRarity",								PTaH_GetRarity },
+	{ "CEconItemView.GetFlags",									PTaH_GetFlags },
+	{ "CEconItemView.GetOrigin",								PTaH_GetOrigin },
+	{ "CEconItemView.GetCustomName",							PTaH_GetCustomName },
+	{ "CEconItemView.GetStatTrakKill",							PTaH_GetKillEater },
+	{ "CEconItemView.GetAttributeValueByIndex",					PTaH_GetAttributeValueByIndex },
+	{ "CEconItemView.AttributeList.get",						CEconItemView_AttributeList_get },
+	{ "CEconItemView.NetworkedDynamicAttributesForDemos.get",	CEconItemView_NetworkedDynamicAttributesForDemos_get },
+	{ "CCSPlayerInventory.GetItemInLoadout",					PTaH_GetItemInLoadout },
+	{ "CCSPlayerInventory.GetItemsCount",						PTaH_GetItemsCount },
+	{ "CCSPlayerInventory.GetItem",								PTaH_GetItem },
+	{ "CAttributeList.DestroyAllAttributes",					CAttributeList_DestroyAllAttributes },
+	{ "CAttributeList.GetAttributesCount",						CAttributeList_GetAttributesCount },
+	{ "CAttributeList.GetAttribute",							CAttributeList_GetAttribute },
+	{ "CAttributeList.GetAttributeByDefIndex",					CAttributeList_GetAttributeByDefIndex },
+	{ "CAttributeList.RemoveAttribute",							CAttributeList_RemoveAttribute},
+	{ "CAttributeList.RemoveAttributeByDefIndex",				CAttributeList_RemoveAttributeByDefIndex },
+	{ "CAttributeList.SetOrAddAttributeValue",					CAttributeList_SetOrAddAttributeValue },
+	{ "CEconItemAttribute.DefinitionIndex.get",					CEconItemAttribute_DefinitionIndex_get },
+	{ "CEconItemAttribute.Value.set",							CEconItemAttribute_Value_set },
+	{ "CEconItemAttribute.Value.get",							CEconItemAttribute_Value_get },
+	{ "CEconItemAttribute.InitialValue.get",					CEconItemAttribute_InitialValue_get },
+	{ "CEconItemAttribute.RefundableCurrency.set",				CEconItemAttribute_RefundableCurrency_set },
+	{ "CEconItemAttribute.RefundableCurrency.get",				CEconItemAttribute_RefundableCurrency_get },
+	{ "CEconItemAttribute.SetBonus.set",						CEconItemAttribute_SetBonus_set },
+	{ "CEconItemAttribute.SetBonus.get",						CEconItemAttribute_SetBonus_get },
 	// Deprecated
-	{ "PTaH_GetItemInLoadout",								PTaH_GetItemInLoadoutDeprecated },
-	{ "PTaH_GetEconItemViewFromWeapon",						PTaH_GetEconItemViewFromEconEntity },
-	{ nullptr,												nullptr }
+	{ "PTaH_GetItemInLoadout",									PTaH_GetItemInLoadoutDeprecated },
+	{ "PTaH_GetEconItemViewFromWeapon",							PTaH_GetEconItemViewFromEconEntity },
+	{ nullptr,													nullptr }
 };

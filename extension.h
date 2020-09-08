@@ -27,6 +27,8 @@
  */
 
 
+// networkvar.h must be included before smsdk_ext.h !!!
+#include "networkvar.h"
 #include "smsdk_ext.h"
 #include <ISDKTools.h>
 #include <iplayerinfo.h>
@@ -37,7 +39,7 @@
 #include <netadr.h>
 #include <inetmessage.h>
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 #define VCallingConvention __thiscall
 #else
 #define VCallingConvention __cdecl

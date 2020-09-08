@@ -331,7 +331,7 @@ void CForwardManager::TempleHookCGameClient::Hook(int iClient)
 
 inline CGameClient* CForwardManager::TempleHookCGameClient::__IClientToGameClient(IClient* pClient)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	//All hooks while only 1 table because of it it is not necessary to take away
 	//.??_R4CGameClient@@6B@_0 dd 0
 	//signature
@@ -347,7 +347,7 @@ inline CGameClient* CForwardManager::TempleHookCGameClient::__IClientToGameClien
 
 inline IClient* CForwardManager::TempleHookCGameClient::__GameClientToIClient(CGameClient* pGameClient)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	return reinterpret_cast<IClient*>(pGameClient);
 #else
 	return pGameClient->ToIClient();

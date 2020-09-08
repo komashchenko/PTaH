@@ -130,6 +130,16 @@ enum CEconItemDefinition
 	CEconItemDefinition_NULL = 0
 };
 
+enum CEconItemAttribute
+{
+	CEconItemAttribute_NULL = 0
+};
+
+enum CAttributeList
+{
+	CAttributeList_NULL = 0
+};
+
 enum CEconItemView
 {
 	CEconItemView_NULL = 0
@@ -145,7 +155,7 @@ enum CCSPlayerInventory
 methodmap CEconItemDefinition
 {
 	// CEconItemDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	// Always check, if not wounded CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemDefinition - NULL ( if(pItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
 
 	/**
 	 * Gets DefinitionIndex.
@@ -218,10 +228,55 @@ methodmap CEconItemDefinition
 	public native int GetClassName(char[] sBuffer, int iLen);
 };
 
+methodmap CEconItemAttribute
+{
+	// CEconItemAttribute is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemAttribute - NULL ( if(pItemAttribute) ) !!!!!!!!!!!!!!!!!!!!!
+	
+	property int DefinitionIndex
+	{
+		public native get();
+	}
+	property any Value
+	{
+		public native set(any Value);
+		public native get();
+	}
+	property any InitialValue
+	{
+		public native get();
+	}
+	property int RefundableCurrency
+	{
+		public native set(int RefundableCurrency);
+		public native get();
+	}
+	property bool SetBonus
+	{
+		public native set(bool SetBonus);
+		public native get();
+	}
+};
+
+methodmap CAttributeList
+{
+	// CAttributeList is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CAttributeList - NULL ( if(pAttributeList) ) !!!!!!!!!!!!!!!!!!!!!
+	
+	public native void DestroyAllAttributes();
+	public native int GetAttributesCount();
+	public native CEconItemAttribute GetAttribute(int iIndex);
+	public native CEconItemAttribute GetAttributeByDefIndex(int iAttrDefIndex);
+	public native void RemoveAttribute(int iIndex);
+	public native void RemoveAttributeByDefIndex(int iAttrDefIndex);
+	public native void SetOrAddAttributeValue(int iAttrDefIndex, any aValue);
+};
+
+
 methodmap CEconItemView
 {
 	// CEconItemView is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	// Always check, if not wounded CEconItemDefinition - NULL ( if(ItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemDefinition - NULL ( if(pEconItemView) ) !!!!!!!!!!!!!!!!!!!!!
 	// If a player will left from a server after function call to obtain CEconItemView (PTaH_GetEconItemViewFromEconEntity this applies if iEntity will be destroyed). You get crash server!!!!!!!!!!!!!!!!!!!!!
 	
 	/**
@@ -417,12 +472,23 @@ methodmap CEconItemView
 	 * @error               CEconItemView == NULL or iAttribIndex invalid.
 	 */
 	public native bool GetAttributeValueByIndex(int iAttribIndex, any &Value);
+	
+	
+	property CAttributeList AttributeList
+	{
+		public native get();
+	}
+	
+	property CAttributeList NetworkedDynamicAttributesForDemos
+	{
+		public native get();
+	}
 };
 
 methodmap CCSPlayerInventory
 {
 	// CCSPlayerInventory is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	// Always check, if not wounded CCSPlayerInventory - NULL ( if(PlayerInventory) ) !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CCSPlayerInventory - NULL ( if(pPlayerInventory) ) !!!!!!!!!!!!!!!!!!!!!
 
 	/**
 	 * Gets CEconItemView in LoadoutSlot.
@@ -846,9 +912,26 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetCustomName");
 	MarkNativeAsOptional("CEconItemView.GetStatTrakKill");
 	MarkNativeAsOptional("CEconItemView.GetAttributeValueByIndex");
+	MarkNativeAsOptional("CEconItemView.AttributeList.get");
+	MarkNativeAsOptional("CEconItemView.NetworkedDynamicAttributesForDemos.get");
 	MarkNativeAsOptional("CCSPlayerInventory.GetItemInLoadout");
 	MarkNativeAsOptional("CCSPlayerInventory.GetItemsCount");
 	MarkNativeAsOptional("CCSPlayerInventory.GetItem");
+	MarkNativeAsOptional("CAttributeList.DestroyAllAttributes");
+	MarkNativeAsOptional("CAttributeList.GetAttributesCount");
+	MarkNativeAsOptional("CAttributeList.GetAttribute");
+	MarkNativeAsOptional("CAttributeList.GetAttributeByDefIndex");
+	MarkNativeAsOptional("CAttributeList.RemoveAttribute");
+	MarkNativeAsOptional("CAttributeList.RemoveAttributeByDefIndex");
+	MarkNativeAsOptional("CAttributeList.SetOrAddAttributeValue");
+	MarkNativeAsOptional("CEconItemAttribute.DefinitionIndex.get");
+	MarkNativeAsOptional("CEconItemAttribute.Value.set");
+	MarkNativeAsOptional("CEconItemAttribute.Value.get");
+	MarkNativeAsOptional("CEconItemAttribute.InitialValue.get");
+	MarkNativeAsOptional("CEconItemAttribute.RefundableCurrency.set");
+	MarkNativeAsOptional("CEconItemAttribute.RefundableCurrency.get");
+	MarkNativeAsOptional("CEconItemAttribute.SetBonus.set");
+	MarkNativeAsOptional("CEconItemAttribute.SetBonus.get");
 
 	// Deprecated
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");

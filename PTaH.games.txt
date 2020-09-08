@@ -149,16 +149,6 @@
 				"windows"       "12"
 				"linux"         "13"
 			}
-			"GetAccountID"
-			{
-				"windows"       "13"
-				"linux"         "14"
-			}
-			"GetItemID"
-			{
-				"windows"       "14"
-				"linux"         "15"
-			}
 			"GetQuality"
 			{
 				"windows"       "15"

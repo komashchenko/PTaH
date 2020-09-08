@@ -34,7 +34,7 @@ void* CEconItemSchema::operator new(size_t) throw()
 		return nullptr;
 	}
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	return GetItemSchema() + sizeof(void*);
 #else
 	return GetItemSchema();
@@ -386,40 +386,6 @@ CEconItemDefinition* CEconItemView::GetItemDefinition()
 	return ((CEconItemDefinition*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
 }
 
-int CEconItemView::GetAccountID()
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("GetAccountID", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetAccountID offset.");
-
-			return -1;
-		}
-	}
-
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
-uint64_t CEconItemView::GetItemID()
-{
-	static int offset = -1;
-
-	if(offset == -1)
-	{
-		if(!g_pGameConf[GameConf_PTaH]->GetOffset("GetItemID", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetItemID offset.");
-
-			return -1;
-		}
-	}
-
-	return ((uint64_t(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
-}
-
 int CEconItemView::GetQuality()
 {
 	static int offset = -1;
@@ -641,4 +607,74 @@ CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItems()
 	}
 
 	return (CUtlVector<CEconItemView*>*)((intptr_t)this + offset);
+}
+
+CEconItemAttribute::CEconItemAttribute()
+{
+	m_iAttributeDefinitionIndex = 0;
+	m_flValue = 0.f;
+	m_flInitialValue = 0.f;
+	m_nRefundableCurrency = 0;
+	m_bSetBonus = false;
+};
+
+CEconItemAttribute::CEconItemAttribute(const uint16 iAttributeIndex, uint32 unValue)
+{
+	CEconItemAttribute();
+
+	m_iAttributeDefinitionIndex = iAttributeIndex;
+
+	m_flValue = *reinterpret_cast<float*>(&unValue);
+	m_flInitialValue = m_flValue;
+};
+
+CEconItemAttribute::CEconItemAttribute(const uint16 iAttributeIndex, float fValue)
+{
+	CEconItemAttribute();
+
+	m_iAttributeDefinitionIndex = iAttributeIndex;
+	m_flValue = fValue;
+	m_flInitialValue = m_flValue;
+};
+
+void CAttributeList::RemoveAttributeByDefIndex(uint16_t unAttrDefIndex)
+{
+	FOR_EACH_VEC(m_Attributes, i)
+	{
+		if (m_Attributes[i].m_iAttributeDefinitionIndex == unAttrDefIndex)
+		{
+			m_Attributes.Remove(i);
+
+			return;
+		}
+	}
+}
+
+void CAttributeList::SetOrAddAttributeValue(uint16_t unAttrDefIndex, uint32_t unValue)
+{
+	CEconItemAttribute* pAttribute = GetAttributeByDefIndex(unAttrDefIndex);
+
+	if (pAttribute)
+	{
+		pAttribute->m_flValue = *reinterpret_cast<float*>(&unValue);
+	}
+	else
+	{
+		CEconItemAttribute attribute(unAttrDefIndex, unValue);
+
+		AddAttribute(attribute);
+	}
+}
+
+CEconItemAttribute* CAttributeList::GetAttributeByDefIndex(uint16_t unAttrDefIndex)
+{
+	FOR_EACH_VEC(m_Attributes, i)
+	{
+		if (m_Attributes[i].m_iAttributeDefinitionIndex == unAttrDefIndex)
+		{
+			return &m_Attributes[i];
+		}
+	}
+
+	return nullptr;
 }
