@@ -47,34 +47,6 @@
 
 typedef CBaseEntity CBaseCombatWeapon;
 
-enum PTaH_HookEvent
-{
-	PTaH_GiveNamedItemPre = 10,
-	PTaH_GiveNamedItemPost,
-	PTaH_WeaponCanUsePre,
-	PTaH_WeaponCanUsePost,
-	PTaH_SetPlayerModelPre,
-	PTaH_SetPlayerModelPost,
-	PTaH_ClientVoiceToPre,
-	PTaH_ClientVoiceToPost,
-	PTaH_ConsolePrintPre,
-	PTaH_ConsolePrintPost,
-	PTaH_ExecuteStringCommandPre,
-	PTaH_ExecuteStringCommandPost,
-	PTaH_ClientConnectPre,
-	PTaH_ClientConnectPost,
-	PTaH_InventoryUpdatePost = 25,
-
-	PTaH_MAXHOOKS
-};
-
-enum PTaH_ModelType
-{
-	ViewModel = 0,
-	WorldModel,
-	DroppedModel
-};
-
 /**
  * @brief Sample implementation of the SDK Extension.
  * Note: Uncomment one of the pre-defined virtual functions in order to use it.

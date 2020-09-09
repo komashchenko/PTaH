@@ -21,9 +21,11 @@
 #ifndef _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 #define _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 
+#include "utlhashmaplarge.h"
+
 class CAttribute_String;
 class stickerMaterialReference_t;
-enum eEconItemOrigin;
+enum eEconItemOrigin { };
 
 enum EStickerAttributeType
 {
@@ -73,6 +75,7 @@ class CEconItemDefinition
 public:
 	uint16 GetDefinitionIndex() { return m_nDefIndex; }
 	int GetLoadoutSlot(int iTeam);
+	int GetUsedByTeam();
 	int GetNumSupportedStickerSlots();
 	const char* GetInventoryImage();
 	const char* GetBasePlayerDisplayModel();
@@ -92,8 +95,11 @@ class CEconItemSchema
 public:
 	static void* operator new(size_t) throw();
 	static void operator delete(void*) { };
-	CEconItemDefinition* GetItemDefinitionByName(const char* classname);
-	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t DefIndex);
+
+	CUtlHashMapLarge<int, CEconItemDefinition*>* GetItemDefinitionMap();
+
+	CEconItemDefinition* GetItemDefinitionByName(const char* pszDefName);
+	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t iItemIndex);
 
 	CEconItemAttributeDefinition* GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
 };

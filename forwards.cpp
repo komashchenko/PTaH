@@ -21,6 +21,7 @@
 #include "extension.h"
 #include "forwards.h"
 #include "classes.h"
+#include "natives.h"
 
 
 CForwardManager g_ForwardManager;

@@ -169,13 +169,15 @@ methodmap CEconItemDefinition
 	/**
 	 * Gets LoadoutSlot.
 	 *
-	 * @param iTeam        Team index or -1 if independently.
+	 * @param iTeam        Team index or 0 if independently.
 	 *
 	 * @return             Returns loadout slot index.
 	 *
 	 * @error              CEconItemDefinition == NULL.
 	 */
-	public native int GetLoadoutSlot(int iTeam = -1);
+	public native int GetLoadoutSlot(int iTeam = 0);
+	
+	public native int GetUsedByTeam();
 
 	/**
 	 * Gets the amount slot for stickers.

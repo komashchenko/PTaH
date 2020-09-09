@@ -459,6 +459,18 @@ static cell_t CEconItemDefinition_GetLoadoutSlot(IPluginContext* pContext, const
 	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
 }
 
+static cell_t CEconItemDefinition_GetUsedByTeam(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
+	if (pItemDefinition)
+	{
+		return pItemDefinition->GetUsedByTeam();
+	}
+
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
+}
+
 static cell_t CEconItemDefinition_GetNumSupportedStickerSlots(IPluginContext* pContext, const cell_t* params)
 {
 	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
@@ -1128,6 +1140,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_FX_FireBullets",									PTaH_FX_FireBullets },
 	{ "CEconItemDefinition.GetDefinitionIndex",					CEconItemDefinition_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",						CEconItemDefinition_GetLoadoutSlot },
+	{ "CEconItemDefinition.GetUsedByTeam",						CEconItemDefinition_GetUsedByTeam },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",		CEconItemDefinition_GetNumSupportedStickerSlots },
 	{ "CEconItemDefinition.GetEconImage",						CEconItemDefinition_GetEconImage },
 	{ "CEconItemDefinition.GetModel",							CEconItemDefinition_GetModel },

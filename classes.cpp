@@ -41,24 +41,7 @@ void* CEconItemSchema::operator new(size_t) throw()
 #endif
 };
 
-CEconItemDefinition* CEconItemSchema::GetItemDefinitionByName(const char* classname)
-{
-	static int offset = -1;
-
-	if (offset == -1)
-	{
-		if (!g_pGameConf[GameConf_CSST]->GetOffset("GetItemDefintionByName", &offset))
-		{
-			smutils->LogError(myself, "Failed to get GetItemDefintionByName offset.");
-
-			return nullptr;
-		}
-	}
-
-	return ((CEconItemDefinition*(VCallingConvention*)(void*, const char*))(*(void***)this)[offset])(this, classname);
-}
-
-CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIndex)
+CUtlHashMapLarge<int, CEconItemDefinition*>* CEconItemSchema::GetItemDefinitionMap()
 {
 	static int offset = -1;
 
@@ -71,26 +54,39 @@ CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t DefIn
 			return nullptr;
 		}
 	}
+	
+	return (CUtlHashMapLarge<int, CEconItemDefinition*>*)((intptr_t)this + offset);
+}
 
-	if (DefIndex > 0)
+CEconItemDefinition* CEconItemSchema::GetItemDefinitionByName(const char* pszDefName)
+{
+	auto pMapItemDef = GetItemDefinitionMap();
+
+	if (pMapItemDef)
 	{
-		//See GetItemDefinitionByMapIndex
-		struct ItemMapMember		// CUtlHashMapLarge<int, CEconItemDefinition*, MurmurHash3Functor<int> >
+		FOR_EACH_MAP_FAST(*pMapItemDef, i)
 		{
-			uint16_t iDefIndex;
-			CEconItemDefinition* pItemDefinition;
-			int iHash;
-		};
+			if (!strcmp(pszDefName, pMapItemDef->Element(i)->GetDefinitionName()))
+			{
+				return pMapItemDef->Element(i);
+			}
+		}
+	}
 
-		ItemMapMember* MapMember = nullptr;
-		int iCount = *(int*)((intptr_t)this + offset + 20);
-		intptr_t ItemMap = *(intptr_t*)((intptr_t)this + offset);
+	return nullptr;
+}
 
-		for (int i = 0; i < iCount; i++)
+CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t iItemIndex)
+{
+	auto pMapItemDef = GetItemDefinitionMap();
+
+	if (pMapItemDef)
+	{
+		int iIndex = pMapItemDef->Find(iItemIndex);
+		
+		if (pMapItemDef->IsValidIndex(iIndex))
 		{
-			MapMember = (ItemMapMember*)(ItemMap + i * sizeof(ItemMapMember));
-
-			if (MapMember->iDefIndex == DefIndex) return MapMember->pItemDefinition;
+			return pMapItemDef->Element(iIndex);
 		}
 	}
 
@@ -129,6 +125,40 @@ int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 	}
 
 	return GetLoadoutSlot(this, iTeam);
+}
+
+int CEconItemDefinition::GetUsedByTeam()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CCStrike15ItemDefinition::m_vbClassUsability", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CCStrike15ItemDefinition::m_vbClassUsability offset.");
+
+			return -1;
+		}
+	}
+
+	CBitVec<4>* pClassUsability = (CBitVec<4>*)((intptr_t)this + offset);
+	
+	if (pClassUsability->IsBitSet(2) && pClassUsability->IsBitSet(3))
+	{
+		return 0;
+	}
+
+	if (pClassUsability->IsBitSet(3))
+	{
+		return 3;
+	}
+
+	if (pClassUsability->IsBitSet(2))
+	{
+		return 2;
+	}
+	
+	return 0;
 }
 
 int CEconItemDefinition::GetNumSupportedStickerSlots()
@@ -298,7 +328,7 @@ intptr_t CCSPlayerInventory::GetInventoryOffset()
 
 CCSPlayerInventory* CCSPlayerInventory::FromPlayer(CBaseEntity* pPlayer)
 {
-	static int offset = GetInventoryOffset();
+	int offset = GetInventoryOffset();
 
 	if (offset == -1)
 	{
@@ -310,7 +340,7 @@ CCSPlayerInventory* CCSPlayerInventory::FromPlayer(CBaseEntity* pPlayer)
 
 CBaseEntity* CCSPlayerInventory::ToPlayer()
 {
-	static int offset = GetInventoryOffset();
+	int offset = GetInventoryOffset();
 
 	if (offset == -1)
 	{
