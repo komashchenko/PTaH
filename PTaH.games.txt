@@ -67,10 +67,10 @@
 				"windows"       "172"
 				"linux"         "172"
 			}
-			"CEconItemSchema::GetAttributeDefinitionInterface"
+			"CEconItemSchema::m_mapAttributesContainer"
 			{
-				"windows"       "27"
-				"linux"         "27"
+				"windows"       "284"
+				"linux"         "284"
 			}
 			"CCStrike15ItemDefinition::m_vbClassUsability"
 			{

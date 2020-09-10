@@ -39,10 +39,19 @@ enum PTaH_ModelType
 
 enum EStickerAttributeType 
 {
-	StickerID = 0,        // int
-	WearProgress,         // float
-	PatternScale,         // float
-	PatternRotation       // float
+	EStickerAttribute_ID = 0,		// int
+	EStickerAttribute_Wear,		// float
+	EStickerAttribute_Scale,		// float
+	EStickerAttribute_Rotation	// float
+};
+
+enum ESchemaAttributeType
+{
+	ESchemaAttribute_Unknown = -1,
+	ESchemaAttribute_Uint32,
+	ESchemaAttribute_Float,
+	ESchemaAttribute_String,
+	ESchemaAttribute_Vector
 };
 
 enum EEconItemQuality
@@ -128,6 +137,11 @@ enum eEconItemOrigin
 enum CEconItemDefinition
 {
 	CEconItemDefinition_NULL = 0
+};
+
+enum CEconItemAttributeDefinition
+{
+	CEconItemAttributeDefinition_NULL = 0
 };
 
 enum CEconItemAttribute
@@ -228,6 +242,18 @@ methodmap CEconItemDefinition
 	 * @error              CEconItemDefinition == NULL.
 	 */
 	public native int GetClassName(char[] sBuffer, int iLen);
+};
+
+methodmap CEconItemAttributeDefinition
+{
+	// CEconItemAttributeDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemAttributeDefinition - NULL ( if(pItemAttributeDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	
+	public native int GetDefinitionIndex();
+	
+	public native int GetDefinitionName(char[] sBuffer, int iLen);
+	
+	public native ESchemaAttributeType GetAttributeType();
 };
 
 methodmap CEconItemAttribute
@@ -754,13 +780,13 @@ native int PTaH_Version(char[] sBuffer = NULL_STRING, int iLen = 0);
 native bool PTaH(PTaH_HookEvent EventType, PTaH_HookType HookType, PTaHCB Callback);
 
 /**
- * Gets CEconItemDefinition from weapon classname.
+ * Gets CEconItemDefinition from name.
  *
- * @param sClassname    Weapon classname.
+ * @param sDefName      Definition name.
  *
  * @return              Returns pointer in CEconItemDefinition.
  */
-native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassname);
+native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sDefName);
 
 /**
  * Gets CEconItemDefinition from definition index.
@@ -770,6 +796,10 @@ native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sClassname)
  * @return              Returns CEconItemDefinition.
  */
 native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int iDefIndex);
+
+native CEconItemAttributeDefinition PTaH_GetAttributeDefinitionByName(const char[] sDefName);
+
+native CEconItemAttributeDefinition PTaH_GetAttributeDefinitionByDefIndex(int iDefIndex);
 
 /**
  * Gets CEconItemView from entity with type DT_EconEntity.
@@ -886,6 +916,8 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("PTaH");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByName");
 	MarkNativeAsOptional("PTaH_GetItemDefinitionByDefIndex");
+	MarkNativeAsOptional("PTaH_GetAttributeDefinitionByName");
+	MarkNativeAsOptional("PTaH_GetAttributeDefinitionByDefIndex");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromEconEntity");
 	MarkNativeAsOptional("PTaH_GetPlayerInventory");
 	MarkNativeAsOptional("PTaH_GivePlayerItem");
@@ -934,6 +966,9 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemAttribute.RefundableCurrency.get");
 	MarkNativeAsOptional("CEconItemAttribute.SetBonus.set");
 	MarkNativeAsOptional("CEconItemAttribute.SetBonus.get");
+	MarkNativeAsOptional("CEconItemAttributeDefinition.GetDefinitionIndex");
+	MarkNativeAsOptional("CEconItemAttributeDefinition.GetDefinitionName");
+	MarkNativeAsOptional("CEconItemAttributeDefinition.GetAttributeType");
 
 	// Deprecated
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");

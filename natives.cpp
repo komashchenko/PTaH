@@ -53,7 +53,9 @@ static cell_t PTaH_GetItemDefinitionByName(IPluginContext* pContext, const cell_
 	{
 		char* strSource; pContext->LocalToString(params[1], &strSource);
 
-		return reinterpret_cast<cell_t>(g_pCEconItemSchema->GetItemDefinitionByName(strSource));
+		CEconItemDefinition* pItemDefinition = g_pCEconItemSchema->GetItemDefinitionByName(strSource);
+
+		return reinterpret_cast<cell_t>(pItemDefinition);
 	}
 
 	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
@@ -68,6 +70,36 @@ static cell_t PTaH_GetItemDefinitionByDefIndex(IPluginContext* pContext, const c
 		CEconItemDefinition* pItemDefinition = g_pCEconItemSchema->GetItemDefinitionByDefIndex(params[1]);
 
 		return reinterpret_cast<cell_t>(pItemDefinition);
+	}
+
+	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+	return 0;
+}
+
+static cell_t PTaH_GetAttributeDefinitionByName(IPluginContext* pContext, const cell_t* params)
+{
+	if (g_pCEconItemSchema)
+	{
+		char* strSource; pContext->LocalToString(params[1], &strSource);
+
+		CEconItemAttributeDefinition* pItemAttributeDefinition = g_pCEconItemSchema->GetAttributeDefinitionByName(strSource);
+
+		return reinterpret_cast<cell_t>(pItemAttributeDefinition);
+	}
+
+	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+	return 0;
+}
+
+static cell_t PTaH_GetAttributeDefinitionByDefIndex(IPluginContext* pContext, const cell_t* params)
+{
+	if (g_pCEconItemSchema)
+	{
+		CEconItemAttributeDefinition* pItemAttributeDefinition = g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(params[1]);
+
+		return reinterpret_cast<cell_t>(pItemAttributeDefinition);
 	}
 
 	smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
@@ -610,7 +642,7 @@ static cell_t CEconItemView_GetStickerAttributeBySlotIndex(IPluginContext* pCont
 	{
 		EStickerAttributeType StickerAttributeType = static_cast<EStickerAttributeType>(params[3]);
 
-		if (StickerAttributeType == StickerID)
+		if (StickerAttributeType == EStickerAttribute_ID)
 		{
 			return pItemView->GetStickerAttributeBySlotIndexInt(params[2], StickerAttributeType, params[4]);
 		}
@@ -1015,6 +1047,18 @@ static cell_t CAttributeList_SetOrAddAttributeValue(IPluginContext* pContext, co
 
 	if (pAttributeList)
 	{
+		if (!g_pCEconItemSchema)
+		{
+			smutils->LogError(myself, "g_pCEconItemSchema == nullptr.");
+
+			return 0;
+		}
+
+		if (!g_pCEconItemSchema->GetAttributeDefinitionByDefIndex(params[2]))
+		{
+			return pContext->ThrowNativeError("Attribute index %d is invalid", params[2]);
+		}
+
 		pAttributeList->SetOrAddAttributeValue(params[2], params[3]);
 
 		return 0;
@@ -1125,6 +1169,50 @@ static cell_t CEconItemAttribute_SetBonus_get(IPluginContext* pContext, const ce
 	return pContext->ThrowNativeError("CEconItemAttribute == nullptr");
 }
 
+static cell_t CEconItemAttributeDefinition_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttributeDefinition* pItemAttributeDefinition = reinterpret_cast<CEconItemAttributeDefinition*>(params[1]);
+
+	if (pItemAttributeDefinition)
+	{
+		return pItemAttributeDefinition->GetDefinitionIndex();
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttributeDefinition == nullptr");
+}
+
+static cell_t CEconItemAttributeDefinition_GetDefinitionName(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttributeDefinition* pItemAttributeDefinition = reinterpret_cast<CEconItemAttributeDefinition*>(params[1]);
+
+	if (pItemAttributeDefinition)
+	{
+		size_t numBytes = 0;
+		const char* sBuf = pItemAttributeDefinition->GetDefinitionName();
+
+		if (sBuf)
+		{
+			pContext->StringToLocalUTF8(params[2], params[3], sBuf, &numBytes);
+		}
+
+		return numBytes;
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttributeDefinition == nullptr");
+}
+
+static cell_t CEconItemAttributeDefinition_GetAttributeType(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemAttributeDefinition* pItemAttributeDefinition = reinterpret_cast<CEconItemAttributeDefinition*>(params[1]);
+
+	if (pItemAttributeDefinition)
+	{
+		return pItemAttributeDefinition->GetAttributeType();
+	}
+
+	return pContext->ThrowNativeError("CEconItemAttributeDefinition == nullptr");
+}
+
 
 extern const sp_nativeinfo_t g_ExtensionNatives[] =
 {
@@ -1132,6 +1220,8 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH",													PTaH_ },
 	{ "PTaH_GetItemDefinitionByName",							PTaH_GetItemDefinitionByName },
 	{ "PTaH_GetItemDefinitionByDefIndex",						PTaH_GetItemDefinitionByDefIndex },
+	{ "PTaH_GetAttributeDefinitionByName",						PTaH_GetAttributeDefinitionByName },
+	{ "PTaH_GetAttributeDefinitionByDefIndex",					PTaH_GetAttributeDefinitionByDefIndex },
 	{ "PTaH_GetEconItemViewFromEconEntity",						PTaH_GetEconItemViewFromEconEntity },
 	{ "PTaH_GetPlayerInventory",								PTaH_GetPlayerInventory },
 	{ "PTaH_GivePlayerItem",									PTaH_GivePlayerItem },
@@ -1181,6 +1271,9 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "CEconItemAttribute.RefundableCurrency.get",				CEconItemAttribute_RefundableCurrency_get },
 	{ "CEconItemAttribute.SetBonus.set",						CEconItemAttribute_SetBonus_set },
 	{ "CEconItemAttribute.SetBonus.get",						CEconItemAttribute_SetBonus_get },
+	{ "CEconItemAttributeDefinition.GetDefinitionIndex",		CEconItemAttributeDefinition_GetDefinitionIndex },
+	{ "CEconItemAttributeDefinition.GetDefinitionName",			CEconItemAttributeDefinition_GetDefinitionName },
+	{ "CEconItemAttributeDefinition.GetAttributeType",			CEconItemAttributeDefinition_GetAttributeType },
 	// Deprecated
 	{ "PTaH_GetItemInLoadout",									PTaH_GetItemInLoadoutDeprecated },
 	{ "PTaH_GetEconItemViewFromWeapon",							PTaH_GetEconItemViewFromEconEntity },

@@ -26,13 +26,24 @@
 class CAttribute_String;
 class stickerMaterialReference_t;
 enum eEconItemOrigin { };
+enum EAssetClassAttrExportRule_t { };
+enum attrib_effect_types_t { };
 
 enum EStickerAttributeType
 {
-	StickerID,
-	WearProgress,
-	PatternScale,
-	PatternRotation
+	EStickerAttribute_ID,
+	EStickerAttribute_Wear,
+	EStickerAttribute_Scale,
+	EStickerAttribute_Rotation
+};
+
+enum ESchemaAttributeType
+{
+	ESchemaAttribute_Unknown = -1,
+	ESchemaAttribute_Uint32,
+	ESchemaAttribute_Float,
+	ESchemaAttribute_String,
+	ESchemaAttribute_Vector
 };
 
 class ISchemaAttributeType
@@ -45,8 +56,8 @@ template<typename T> class ISchemaAttributeTypeBase : public ISchemaAttributeTyp
 template<typename T> class CSchemaAttributeTypeBase : public ISchemaAttributeTypeBase<T> {};
 template<typename T> class CSchemaAttributeTypeProtobufBase : public CSchemaAttributeTypeBase<T> {};
 
-class CSchemaAttributeType_Default : public CSchemaAttributeTypeBase<unsigned int> {};
-class CSchemaAttributeType_Uint32 : public CSchemaAttributeTypeBase<unsigned int> {};
+class CSchemaAttributeType_Default : public CSchemaAttributeTypeBase<uint32> {};
+class CSchemaAttributeType_Uint32 : public CSchemaAttributeTypeBase<uint32> {};
 class CSchemaAttributeType_Float : public CSchemaAttributeTypeBase<float> {};
 class CSchemaAttributeType_String : public CSchemaAttributeTypeProtobufBase<CAttribute_String> {};
 class CSchemaAttributeType_Vector : public CSchemaAttributeTypeBase<Vector> {};
@@ -54,20 +65,42 @@ class CSchemaAttributeType_Vector : public CSchemaAttributeTypeBase<Vector> {};
 class CEconItemAttributeDefinition
 {
 public:
-	virtual uint16_t GetDefinitionIndex() const = 0;
+	virtual uint16 GetDefinitionIndex() const = 0;
 	virtual const char* GetDefinitionName() const = 0;
 	virtual const char* GetDescriptionString() const = 0;
 	virtual const char* GetAttributeClass() const = 0;
 	virtual const KeyValues* GetRawDefinition() const = 0;
 
-	template<typename T> bool IsAttributeType() const
+	uint16 GetDefinitionIndex() { return m_nDefIndex; }
+	const char* GetDefinitionName() { return m_pszDefinitionName; }
+	bool IsStoredAsInteger() { return m_bStoredAsInteger; }
+	bool IsStoredAsFloat() { return !m_bStoredAsInteger; }
+
+	template<typename T> bool IsAttributeType()
 	{
-		return (dynamic_cast<T*>(this->m_pAttributeType) != nullptr);
+		return (dynamic_cast<T*>(this->m_pAttrType) != nullptr);
 	}
 
-	KeyValues* m_pKVAttribute;
-	uint16_t m_nDefIndex;
-	ISchemaAttributeType* m_pAttributeType;
+	ESchemaAttributeType GetAttributeType();
+
+	KeyValues* m_pKVAttribute; //4
+	uint16 m_nDefIndex; //8
+	ISchemaAttributeType* m_pAttrType; //12
+	bool m_bHidden; //16
+	bool m_bWebSchemaOutputForced; //17
+	bool m_bStoredAsInteger; //18
+	bool m_bInstanceData; //19
+	EAssetClassAttrExportRule_t	m_eAssetClassAttrExportRule; //20
+	uint32 m_unAssetClassBucket; //24
+	attrib_effect_types_t m_iEffectType; //28
+	int m_iDescriptionFormat; //32
+	const char* m_pszDescriptionString; //36
+	const char* m_pszDescriptionTag; //40
+	const char* m_pszArmoryDesc; //44
+	int m_iScore; //48
+	const char* m_pszDefinitionName; //52
+	const char* m_pszAttributeClass; //56
+	mutable string_t m_iszAttributeClass; //60
 };
 
 class CEconItemDefinition
@@ -97,11 +130,12 @@ public:
 	static void operator delete(void*) { };
 
 	CUtlHashMapLarge<int, CEconItemDefinition*>* GetItemDefinitionMap();
+	CUtlVector<CEconItemAttributeDefinition*>* GetAttributeDefinitionContainer();
 
 	CEconItemDefinition* GetItemDefinitionByName(const char* pszDefName);
 	CEconItemDefinition* GetItemDefinitionByDefIndex(uint16_t iItemIndex);
-
-	CEconItemAttributeDefinition* GetAttributeDefinitionByDefIndex(uint16_t DefIndex);
+	CEconItemAttributeDefinition* GetAttributeDefinitionByName(const char* pszDefName);
+	CEconItemAttributeDefinition* GetAttributeDefinitionByDefIndex(uint16_t iDefIndex);
 };
 
 class IEconItemAttributeIterator

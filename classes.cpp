@@ -58,6 +58,23 @@ CUtlHashMapLarge<int, CEconItemDefinition*>* CEconItemSchema::GetItemDefinitionM
 	return (CUtlHashMapLarge<int, CEconItemDefinition*>*)((intptr_t)this + offset);
 }
 
+CUtlVector<CEconItemAttributeDefinition*>* CEconItemSchema::GetAttributeDefinitionContainer()
+{
+	static int offset = -1;
+
+	if (offset == -1)
+	{
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemSchema::m_mapAttributesContainer", &offset))
+		{
+			smutils->LogError(myself, "Failed to get CEconItemSchema::m_mapAttributesContainer offset.");
+
+			return nullptr;
+		}
+	}
+
+	return (CUtlVector<CEconItemAttributeDefinition*>*)((intptr_t)this + offset);
+}
+
 CEconItemDefinition* CEconItemSchema::GetItemDefinitionByName(const char* pszDefName)
 {
 	auto pMapItemDef = GetItemDefinitionMap();
@@ -93,21 +110,74 @@ CEconItemDefinition* CEconItemSchema::GetItemDefinitionByDefIndex(uint16_t iItem
 	return nullptr;
 }
 
-CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByDefIndex(uint16_t DefIndex)
+CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByName(const char* pszDefName)
 {
-	static int offset = -1;
+	auto pAttributesContainer = GetAttributeDefinitionContainer();
 
-	if (offset == -1)
+	if (pAttributesContainer)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CEconItemSchema::GetAttributeDefinitionInterface", &offset))
+		FOR_EACH_VEC(*pAttributesContainer, i)
 		{
-			smutils->LogError(myself, "Failed to get CEconItemSchema::GetAttributeDefinitionInterface offset.");
+			CEconItemAttributeDefinition* pItemAttributeDefinition = pAttributesContainer->Element(i);
 
-			return nullptr;
+			if (pItemAttributeDefinition && !strcmp(pszDefName, pItemAttributeDefinition->GetDefinitionName()))
+			{
+				return pItemAttributeDefinition;
+			}
+		}
+	}
+	
+	return nullptr;
+}
+
+CEconItemAttributeDefinition* CEconItemSchema::GetAttributeDefinitionByDefIndex(uint16_t iDefIndex)
+{
+	auto pAttributesContainer = GetAttributeDefinitionContainer();
+
+	if (pAttributesContainer)
+	{
+		if (pAttributesContainer->IsValidIndex(iDefIndex))
+		{
+			return pAttributesContainer->Element(iDefIndex);
 		}
 	}
 
-	return ((CEconItemAttributeDefinition*(VCallingConvention*)(void*, uint16_t))(*(void***)this)[offset])(this, DefIndex);
+	return nullptr;
+}
+
+ESchemaAttributeType CEconItemAttributeDefinition::GetAttributeType()
+{
+	if (IsAttributeType<CSchemaAttributeType_Default>())
+	{
+		if (IsStoredAsInteger())
+		{
+			return ESchemaAttribute_Uint32;
+		}
+
+		return ESchemaAttribute_Float;
+	}
+
+	if (IsAttributeType<CSchemaAttributeType_Uint32>())
+	{
+		return ESchemaAttribute_Uint32;
+	}
+
+	if (IsAttributeType<CSchemaAttributeType_Float>())
+	{
+		return ESchemaAttribute_Float;
+	}
+
+	if (IsAttributeType<CSchemaAttributeType_String>())
+	{
+		return ESchemaAttribute_String;
+	}
+
+	if (IsAttributeType<CSchemaAttributeType_Vector>())
+	{
+		return ESchemaAttribute_Vector;
+	}
+
+	return ESchemaAttribute_Unknown;
 }
 
 int CEconItemDefinition::GetLoadoutSlot(int iTeam)
