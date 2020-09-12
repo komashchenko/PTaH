@@ -5,6 +5,8 @@
 
 
 
+#define PTaH_AVATAR_SIZE 64*64*3
+
 enum PTaH_HookType
 {
 	UnHook = 0,
@@ -884,6 +886,8 @@ native int PTaH_SpawnItemFromDefIndex(int iDefIndex, const float vecOrigin[3], c
  * @error               Invalid client index or CEconItemView == NULL or vecOrigin == NULL_VECTOR.
  */
 native void PTaH_FX_FireBullets(int iClient, CEconItemView pItemView, const float vecOrigin[3], const float flAngles[3], int iMode, int iSeed, float flInaccuracy, float flSpread, float flFishtail, int iSoundType, float flRecoilIndex);
+
+native bool PTaH_SetPlayerAvatar(int iClient, int iTarget = -1, const char AvatarValue[PTaH_AVATAR_SIZE]);
 
 #pragma deprecated Use CCSPlayerInventory::GetItemInLoadout() instead
 native CEconItemView PTaH_GetItemInLoadout(int iClient, int iTeam, int iLoadoutSlot);

@@ -22,6 +22,8 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_CLASSES_H_
 
 #include "utlhashmaplarge.h"
+#include "netmessages.pb.h"
+#include "inetchannelinfo.h"
 
 class CAttribute_String;
 class stickerMaterialReference_t;
@@ -90,7 +92,7 @@ public:
 	bool m_bWebSchemaOutputForced; //17
 	bool m_bStoredAsInteger; //18
 	bool m_bInstanceData; //19
-	EAssetClassAttrExportRule_t	m_eAssetClassAttrExportRule; //20
+	EAssetClassAttrExportRule_t m_eAssetClassAttrExportRule; //20
 	uint32 m_unAssetClassBucket; //24
 	attrib_effect_types_t m_iEffectType; //28
 	int m_iDescriptionFormat; //32
@@ -371,6 +373,28 @@ public:
 	CUtlVector<CEconItemView*>* GetItemVector();
 };
 
+class CNetMessagePB_PlayerAvatarData : public INetMessage, public CNETMsg_PlayerAvatarData
+{
+public:
+	CNetMessagePB_PlayerAvatarData() { }
+
+	virtual bool ReadFromBuffer(bf_read& buffer) { return false; }
+	virtual bool WriteToBuffer(bf_write& buffer);
+	virtual const char* ToString() const;
+	virtual int GetType() const { return net_PlayerAvatarData; }
+	virtual size_t GetSize() const { return sizeof(*this); }
+	virtual const char* GetName() const { return "CNETMsg_PlayerAvatarData"; };
+	virtual int GetGroup() const { return INetChannelInfo::PAINTMAP; }
+	virtual void SetReliable(bool state) { }
+	virtual bool IsReliable() const { return true; }
+	virtual INetMessage* Clone() const { return nullptr; }
+	virtual void SetNetChannel(INetChannel* netchan) { }
+	virtual INetChannel* GetNetChannel(void) const { return nullptr; }
+	virtual bool Process() { return false; }
+
+protected:
+	mutable std::string	m_toString;
+};
 
 extern CEconItemSchema* g_pCEconItemSchema;
 extern CPlayerVoiceListener* g_pCPlayerVoiceListener;

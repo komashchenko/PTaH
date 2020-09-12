@@ -22,6 +22,7 @@
 #include "natives.h"
 #include "forwards.h"
 #include "classes.h"
+#include <inetchannel.h>
 
 
 static cell_t PTaH_Version(IPluginContext* pContext, const cell_t* params)
@@ -283,6 +284,11 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 		return pContext->ThrowNativeError("Client %d is not in game", params[1]);
 	}
 
+	if (pPlayer->IsFakeClient())
+	{
+		return pContext->ThrowNativeError("Client %d is a bot", params[1]);
+	}
+
 	static int offset = -1;
 
 	if (offset == -1)
@@ -465,6 +471,87 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	*bLagCompensation = bSave;
 
 	return 0;
+}
+
+static cell_t PTaH_SetPlayerAvatar(IPluginContext* pContext, const cell_t* params)
+{
+	int iClient = params[1], iTarget = params[2];
+
+	IGamePlayer* pClient = playerhelpers->GetGamePlayer(iClient);
+
+	if (!pClient)
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", iClient);
+	}
+
+	if (!pClient->IsConnected())
+	{
+		return pContext->ThrowNativeError("Client %d is not connected", iClient);
+	}
+
+	if (pClient->IsFakeClient())
+	{
+		return pContext->ThrowNativeError("Client %d is a bot", iClient);
+	}
+
+	IGamePlayer* pTarget;
+
+	if (params[2] != -1)
+	{
+		pTarget = playerhelpers->GetGamePlayer(params[2]);
+
+		if (!pTarget)
+		{
+			return pContext->ThrowNativeError("Target index %d is invalid", iTarget);
+		}
+
+		if (!pTarget->IsConnected())
+		{
+			return pContext->ThrowNativeError("Target %d is not connected", iTarget);
+		}
+
+		if (pClient->IsFakeClient())
+		{
+			return pContext->ThrowNativeError("Target %d is a bot", iTarget);
+		}
+	}
+
+	cell_t* pAvatarValue;
+	pContext->LocalToPhysAddr(params[3], &pAvatarValue);
+
+	CNetMessagePB_PlayerAvatarData msgAvatarData;
+
+	msgAvatarData.set_accountid(pClient->GetSteamAccountID());
+	msgAvatarData.set_rgb(pAvatarValue, 64*64*3);
+
+	INetChannel* pNetChan;
+
+	if (iTarget != -1)
+	{
+		if (pNetChan = static_cast<INetChannel*>(engine->GetPlayerNetInfo(iTarget)))
+		{
+			return pNetChan->EnqueueVeryLargeAsyncTransfer(msgAvatarData);
+		}
+	}
+	else
+	{
+		bool bResult = true;
+
+		for (int i = 1; i <= playerhelpers->GetMaxClients(); i++)
+		{
+			if (pNetChan = static_cast<INetChannel*>(engine->GetPlayerNetInfo(i)))
+			{
+				if (!pNetChan->EnqueueVeryLargeAsyncTransfer(msgAvatarData))
+				{
+					bResult = false;
+				}
+			}
+		}
+
+		return bResult;
+	}
+
+	return false;
 }
 
 static cell_t CEconItemDefinition_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
@@ -1228,6 +1315,7 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_ForceFullUpdate",									PTaH_ForceFullUpdate },
 	{ "PTaH_SpawnItemFromDefIndex",								PTaH_SpawnItemFromDefIndex },
 	{ "PTaH_FX_FireBullets",									PTaH_FX_FireBullets },
+	{ "PTaH_SetPlayerAvatar",									PTaH_SetPlayerAvatar },
 	{ "CEconItemDefinition.GetDefinitionIndex",					CEconItemDefinition_GetDefinitionIndex },
 	{ "CEconItemDefinition.GetLoadoutSlot",						CEconItemDefinition_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetUsedByTeam",						CEconItemDefinition_GetUsedByTeam },

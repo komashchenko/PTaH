@@ -523,3 +523,27 @@ CEconItemAttribute* CAttributeList::GetAttributeByDefIndex(uint16_t unAttrDefInd
 
 	return nullptr;
 }
+
+bool CNetMessagePB_PlayerAvatarData::WriteToBuffer(bf_write& buffer)
+{
+	int size = ByteSize();
+
+	void* serializeBuffer = stackalloc(size);
+
+	if (!SerializeWithCachedSizesToArray((google::protobuf::uint8*)serializeBuffer))
+	{
+		return false;
+	}
+
+	buffer.WriteVarInt32(GetType());
+	buffer.WriteVarInt32(size);
+
+	return buffer.WriteBytes(serializeBuffer, size);
+}
+
+const char* CNetMessagePB_PlayerAvatarData::ToString() const
+{
+	m_toString = DebugString();
+
+	return m_toString.c_str();
+}
