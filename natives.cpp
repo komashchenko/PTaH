@@ -367,7 +367,7 @@ static cell_t PTaH_SpawnItemFromDefIndex(IPluginContext* pContext, const cell_t*
 
 	if (SpawnItem == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CItemGeneration::SpawnItem", (void**)&SpawnItem))
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CItemGeneration::SpawnItem", (void**)&SpawnItem) || !SpawnItem)
 		{
 			smutils->LogError(myself, "Failed to get CItemGeneration::SpawnItem function.");
 
@@ -440,7 +440,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 
 	if (FX_FireBullets == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets))
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets) || !FX_FireBullets)
 		{
 			smutils->LogError(myself, "Failed to get FX_FireBullets function.");
 

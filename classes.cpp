@@ -27,7 +27,7 @@ void* CEconItemSchema::operator new(size_t) throw()
 	//Called once, no static needed
 	CEconItemSchema* (*GetItemSchema)(void);
 
-	if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", (void**)&GetItemSchema))
+	if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", (void**)&GetItemSchema) || !GetItemSchema)
 	{
 		smutils->LogError(myself, "Failed to get GetItemSchema function.");
 
@@ -186,7 +186,7 @@ int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 
 	if (GetLoadoutSlot == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CCStrike15ItemDefinition::GetLoadoutSlot", (void**)&GetLoadoutSlot))
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CCStrike15ItemDefinition::GetLoadoutSlot", (void**)&GetLoadoutSlot) || !GetLoadoutSlot)
 		{
 			smutils->LogError(myself, "Failed to get CCStrike15ItemDefinition::GetLoadoutSlot function.");
 
@@ -355,7 +355,7 @@ void* CPlayerVoiceListener::operator new(size_t) throw()
 {
 	void* addr = nullptr;
 
-	if (!g_pGameConf[GameConf_PTaH]->GetAddress("g_CPlayerVoiceListener", &addr))
+	if (!g_pGameConf[GameConf_PTaH]->GetAddress("g_CPlayerVoiceListener", &addr) || !addr)
 	{
 		smutils->LogError(myself, "Failed to get g_CPlayerVoiceListener address.");
 	}
@@ -383,7 +383,7 @@ intptr_t CCSPlayerInventory::GetInventoryOffset()
 			return -1;
 		}
 
-		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr))
+		if (!g_pGameConf[GameConf_CSST]->GetMemSig("HandleCommand_Buy_Internal", &addr) || !addr)
 		{
 			smutils->LogError(myself, "Failed to get HandleCommand_Buy_Internal address.");
 
