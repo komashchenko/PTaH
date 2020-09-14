@@ -1,4 +1,4 @@
-﻿/**
+/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
@@ -204,7 +204,7 @@ void CForwardManager::TempleHookClient::Shutdown()
 
 void CForwardManager::TempleHookClient::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -292,7 +292,7 @@ bool CForwardManager::TempleHookVP::UpdateForward(IPluginFunction* pFunc, bool b
 
 void CForwardManager::TempleHookVP::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -446,7 +446,7 @@ void CForwardManager::GiveNamedItemPre::Shutdown()
 
 void CForwardManager::GiveNamedItemPre::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -680,7 +680,7 @@ bool CForwardManager::ClientVoiceToPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientVoiceToPre::UpdateHook()
 {
-	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -777,7 +777,7 @@ bool CForwardManager::ClientVoiceToPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientVoiceToPost::UpdateHook()
 {
-	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -933,7 +933,7 @@ void CForwardManager::ClientConnectPre::Init()
 		{
 			SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
 
-			pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
+			pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
 		}
 		else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPre will be unavailable.");
 	}
@@ -969,7 +969,7 @@ bool CForwardManager::ClientConnectPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientConnectPre::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1011,7 +1011,7 @@ static const char* ExtractPlayerName(CUtlVector<NetMsg_SplitPlayerConnect*>& pSp
 
 IClient* CForwardManager::ClientConnectPre::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
 {
-	if (nAuthProtocol == 3 && cbCookie >= sizeof(CSteamID))
+	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
 	{
 		cell_t res = Pl_Continue;
 		const CSteamID* SteamID = reinterpret_cast<const CSteamID*>(pCookie);
@@ -1053,7 +1053,7 @@ void CForwardManager::ClientConnectPost::Init()
 	{
 		SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
 
-		pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
+		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
 	}
 	else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPost will be unavailable.");
 }
@@ -1087,7 +1087,7 @@ bool CForwardManager::ClientConnectPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientConnectPost::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1103,7 +1103,7 @@ void CForwardManager::ClientConnectPost::UpdateHook()
 
 IClient* CForwardManager::ClientConnectPost::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
 {
-	if (nAuthProtocol == 3 && cbCookie >= sizeof(CSteamID))
+	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
 	{
 		IClient* pClient = META_RESULT_ORIG_RET(IClient*);
 
