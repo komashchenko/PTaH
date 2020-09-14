@@ -475,7 +475,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 
 static cell_t PTaH_SetPlayerAvatar(IPluginContext* pContext, const cell_t* params)
 {
-	int iClient = params[1], iTarget = params[2];
+	int iClient = params[1];
 
 	IGamePlayer* pClient = playerhelpers->GetGamePlayer(iClient);
 
@@ -494,11 +494,16 @@ static cell_t PTaH_SetPlayerAvatar(IPluginContext* pContext, const cell_t* param
 		return pContext->ThrowNativeError("Client %d is a bot", iClient);
 	}
 
-	IGamePlayer* pTarget;
+	cell_t* pTargets;
+	pContext->LocalToPhysAddr(params[2], &pTargets);
 
-	if (params[2] != -1)
+	cell_t iTargets = params[3];
+
+	for (int i = 0; i < iTargets; i++)
 	{
-		pTarget = playerhelpers->GetGamePlayer(params[2]);
+		cell_t iTarget = pTargets[i];
+		
+		IGamePlayer* pTarget = playerhelpers->GetGamePlayer(iTarget);
 
 		if (!pTarget)
 		{
@@ -510,14 +515,14 @@ static cell_t PTaH_SetPlayerAvatar(IPluginContext* pContext, const cell_t* param
 			return pContext->ThrowNativeError("Target %d is not connected", iTarget);
 		}
 
-		if (pClient->IsFakeClient())
+		if (pTarget->IsFakeClient())
 		{
 			return pContext->ThrowNativeError("Target %d is a bot", iTarget);
 		}
 	}
 
 	cell_t* pAvatarValue;
-	pContext->LocalToPhysAddr(params[3], &pAvatarValue);
+	pContext->LocalToPhysAddr(params[4], &pAvatarValue);
 
 	CNetMessagePB_PlayerAvatarData msgAvatarData;
 
@@ -526,32 +531,20 @@ static cell_t PTaH_SetPlayerAvatar(IPluginContext* pContext, const cell_t* param
 
 	INetChannel* pNetChan;
 
-	if (iTarget != -1)
-	{
-		if (pNetChan = static_cast<INetChannel*>(engine->GetPlayerNetInfo(iTarget)))
-		{
-			return pNetChan->EnqueueVeryLargeAsyncTransfer(msgAvatarData);
-		}
-	}
-	else
-	{
-		bool bResult = true;
+	bool bResult = true;
 
-		for (int i = 1; i <= playerhelpers->GetMaxClients(); i++)
+	for (int i = 0; i < iTargets; i++)
+	{
+		if (pNetChan = static_cast<INetChannel*>(engine->GetPlayerNetInfo(pTargets[i])))
 		{
-			if (pNetChan = static_cast<INetChannel*>(engine->GetPlayerNetInfo(i)))
+			if (!pNetChan->EnqueueVeryLargeAsyncTransfer(msgAvatarData))
 			{
-				if (!pNetChan->EnqueueVeryLargeAsyncTransfer(msgAvatarData))
-				{
-					bResult = false;
-				}
+				bResult = false;
 			}
 		}
-
-		return bResult;
 	}
 
-	return false;
+	return bResult;
 }
 
 static cell_t CEconItemDefinition_GetDefinitionIndex(IPluginContext* pContext, const cell_t* params)
@@ -561,6 +554,26 @@ static cell_t CEconItemDefinition_GetDefinitionIndex(IPluginContext* pContext, c
 	if (pItemDefinition)
 	{
 		return pItemDefinition->GetDefinitionIndex();
+	}
+
+	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
+}
+
+static cell_t CEconItemDefinition_GetDefinitionName(IPluginContext* pContext, const cell_t* params)
+{
+	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
+
+	if (pItemDefinition)
+	{
+		size_t numBytes = 0;
+		const char* sBuf = pItemDefinition->GetDefinitionName();
+
+		if (sBuf)
+		{
+			pContext->StringToLocalUTF8(params[2], params[3], sBuf, &numBytes);
+		}
+
+		return numBytes;
 	}
 
 	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
@@ -657,26 +670,6 @@ static cell_t CEconItemDefinition_GetModel(IPluginContext* pContext, const cell_
 		if (sBuf)
 		{
 			pContext->StringToLocalUTF8(params[3], params[4], sBuf, &numBytes);
-		}
-
-		return numBytes;
-	}
-
-	return pContext->ThrowNativeError("CEconItemDefinition == nullptr");
-}
-
-static cell_t CEconItemDefinition_GetClassName(IPluginContext* pContext, const cell_t* params)
-{
-	CEconItemDefinition* pItemDefinition = reinterpret_cast<CEconItemDefinition*>(params[1]);
-
-	if (pItemDefinition)
-	{
-		size_t numBytes = 0;
-		const char* sBuf = pItemDefinition->GetDefinitionName();
-
-		if (sBuf)
-		{
-			pContext->StringToLocalUTF8(params[2], params[3], sBuf, &numBytes);
 		}
 
 		return numBytes;
@@ -1317,12 +1310,12 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	{ "PTaH_FX_FireBullets",									PTaH_FX_FireBullets },
 	{ "PTaH_SetPlayerAvatar",									PTaH_SetPlayerAvatar },
 	{ "CEconItemDefinition.GetDefinitionIndex",					CEconItemDefinition_GetDefinitionIndex },
+	{ "CEconItemDefinition.GetDefinitionName",					CEconItemDefinition_GetDefinitionName },
 	{ "CEconItemDefinition.GetLoadoutSlot",						CEconItemDefinition_GetLoadoutSlot },
 	{ "CEconItemDefinition.GetUsedByTeam",						CEconItemDefinition_GetUsedByTeam },
 	{ "CEconItemDefinition.GetNumSupportedStickerSlots",		CEconItemDefinition_GetNumSupportedStickerSlots },
 	{ "CEconItemDefinition.GetEconImage",						CEconItemDefinition_GetEconImage },
 	{ "CEconItemDefinition.GetModel",							CEconItemDefinition_GetModel },
-	{ "CEconItemDefinition.GetClassName",						CEconItemDefinition_GetClassName },
 	{ "CEconItemView.GetCustomPaintKitIndex",					CEconItemView_GetCustomPaintKitIndex },
 	{ "CEconItemView.GetCustomPaintKitSeed",					CEconItemView_GetCustomPaintKitSeed },
 	{ "CEconItemView.GetCustomPaintKitWear",					CEconItemView_GetCustomPaintKitWear },
@@ -1365,5 +1358,6 @@ extern const sp_nativeinfo_t g_ExtensionNatives[] =
 	// Deprecated
 	{ "PTaH_GetItemInLoadout",									PTaH_GetItemInLoadoutDeprecated },
 	{ "PTaH_GetEconItemViewFromWeapon",							PTaH_GetEconItemViewFromEconEntity },
+	{ "CEconItemDefinition.GetClassName",						CEconItemDefinition_GetDefinitionName },
 	{ nullptr,													nullptr }
 };
