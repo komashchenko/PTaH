@@ -417,7 +417,7 @@ methodmap CAttributeList	// < Address
 methodmap CEconItemView	// < Address
 {
 	// CEconItemView is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	// Always check, if not wounded CEconItemDefinition - NULL ( if(pItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemView - NULL ( if(pItemView) ) !!!!!!!!!!!!!!!!!!!!!
 	// If a player will left from a server after function call to obtain CEconItemView (PTaH_GetEconItemViewFromEconEntity this applies if iEntity will be destroyed). You get crash server!!!!!!!!!!!!!!!!!!!!!
 	
 	/**
