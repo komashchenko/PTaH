@@ -131,8 +131,8 @@ enum eEconItemOrigin
 	kEconItemOrigin_Recycling,
 	kEconItemOrigin_TournamentDrop,
 	kEconItemOrigin_StockItem,
-	KEconItemOrigin_QuestReward,
-	KEconItemOrigin_LevelUpReward,
+	kEconItemOrigin_QuestReward,
+	kEconItemOrigin_LevelUpReward,
 
 	kEconItemOrigin_Max,
 };
@@ -1027,7 +1027,7 @@ native void PTaH_FX_FireBullets(int iClient, CEconItemView pItemView, const floa
  *
  * @return              Is avatar sets.
  *
- * @error               Invalid client index, or client or target is fake.
+ * @error               Invalid client or target (in array) index, or not connected, or is fake.
  */
 native bool PTaH_SetPlayerAvatar(int iClient, const int[] iTargets, int iTargetCount, const char Avatar[PTaH_AVATAR_SIZE]);
 
@@ -1131,8 +1131,8 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemAttributeDefinition.GetAttributeType");
 
 	// Deprecated
-	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
+	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
 }
 #endif
