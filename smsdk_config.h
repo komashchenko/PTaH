@@ -29,8 +29,8 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"PTaH"
 #define SMEXT_CONF_DESCRIPTION	"Additional CS:GO Hooks and Natives"
-#define SMEXT_CONF_VERSION		"1.1.2"
-#define PTaH_VERSION			101020
+#define SMEXT_CONF_VERSION		"1.1.3"
+#define PTaH_VERSION			101030
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
 #define SMEXT_CONF_URL			"https://zizt.ru/ | https://hlmod.ru"
 #define SMEXT_CONF_LOGTAG		"PTaH"
