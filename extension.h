@@ -27,6 +27,8 @@
  */
 
 
+// networkvar.h must be included before smsdk_ext.h !!!
+#include "networkvar.h"
 #include "smsdk_ext.h"
 #include <ISDKTools.h>
 #include <iplayerinfo.h>
@@ -37,41 +39,13 @@
 #include <netadr.h>
 #include <inetmessage.h>
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 #define VCallingConvention __thiscall
 #else
 #define VCallingConvention __cdecl
 #endif
 
 typedef CBaseEntity CBaseCombatWeapon;
-
-enum PTaH_HookEvent
-{
-	PTaH_GiveNamedItemPre = 10,
-	PTaH_GiveNamedItemPost,
-	PTaH_WeaponCanUsePre,
-	PTaH_WeaponCanUsePost,
-	PTaH_SetPlayerModelPre,
-	PTaH_SetPlayerModelPost,
-	PTaH_ClientVoiceToPre,
-	PTaH_ClientVoiceToPost,
-	PTaH_ConsolePrintPre,
-	PTaH_ConsolePrintPost,
-	PTaH_ExecuteStringCommandPre,
-	PTaH_ExecuteStringCommandPost,
-	PTaH_ClientConnectPre,
-	PTaH_ClientConnectPost,
-	PTaH_InventoryUpdatePost = 25,
-
-	PTaH_MAXHOOKS
-};
-
-enum PTaH_ModelType
-{
-	ViewModel = 0,
-	WorldModel,
-	DroppedModel
-};
 
 /**
  * @brief Sample implementation of the SDK Extension.

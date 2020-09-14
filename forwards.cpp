@@ -1,4 +1,4 @@
-﻿/**
+/**
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod P Tools and Hooks Extension
@@ -21,6 +21,7 @@
 #include "extension.h"
 #include "forwards.h"
 #include "classes.h"
+#include "natives.h"
 
 
 CForwardManager g_ForwardManager;
@@ -203,7 +204,7 @@ void CForwardManager::TempleHookClient::Shutdown()
 
 void CForwardManager::TempleHookClient::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -291,7 +292,7 @@ bool CForwardManager::TempleHookVP::UpdateForward(IPluginFunction* pFunc, bool b
 
 void CForwardManager::TempleHookVP::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -331,7 +332,7 @@ void CForwardManager::TempleHookCGameClient::Hook(int iClient)
 
 inline CGameClient* CForwardManager::TempleHookCGameClient::__IClientToGameClient(IClient* pClient)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	//All hooks while only 1 table because of it it is not necessary to take away
 	//.??_R4CGameClient@@6B@_0 dd 0
 	//signature
@@ -347,14 +348,14 @@ inline CGameClient* CForwardManager::TempleHookCGameClient::__IClientToGameClien
 
 inline IClient* CForwardManager::TempleHookCGameClient::__GameClientToIClient(CGameClient* pGameClient)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 	return reinterpret_cast<IClient*>(pGameClient);
 #else
 	return pGameClient->ToIClient();
 #endif
 }
 
-DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bUnknown, void*, vUnknown)
+DETOUR_DECL_MEMBER4(CCSPlayer_FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bMustBeTeamSpecific, CUtlVector<CEconItemView*>&, matchingWeapons)
 {
 	if (g_ForwardManager.GiveNamedItemPre.bIgnoredCEconItemView)
 	{
@@ -363,7 +364,7 @@ DETOUR_DECL_MEMBER4(FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, sz
 		return 0LL;
 	}
 
-	return DETOUR_MEMBER_CALL(FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bUnknown, vUnknown);
+	return DETOUR_MEMBER_CALL(CCSPlayer_FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bMustBeTeamSpecific, matchingWeapons);
 }
 
 CBaseEntity* CForwardManager::GiveNamedItemPre::SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin)
@@ -426,9 +427,9 @@ void CForwardManager::GiveNamedItemPre::Init()
 		SH_MANUALHOOK_RECONFIGURE(GiveNamedItem, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 6, nullptr, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
-		pFindMatchingWeaponsForTeamLoadout = DETOUR_CREATE_MEMBER(FindMatchingWeaponsForTeamLoadout, "FindMatchingWeaponsForTeamLoadout");
+		pFindMatchingWeaponsForTeamLoadout = DETOUR_CREATE_MEMBER(CCSPlayer_FindMatchingWeaponsForTeamLoadout, "CCSPlayer::FindMatchingWeaponsForTeamLoadout");
 
-		if (!pFindMatchingWeaponsForTeamLoadout) smutils->LogError(myself, "Detour failed FindMatchingWeaponsForTeamLoadout, functionality GiveNamedItemPre will be limited.");
+		if (!pFindMatchingWeaponsForTeamLoadout) smutils->LogError(myself, "Detour failed CCSPlayer::FindMatchingWeaponsForTeamLoadout, functionality GiveNamedItemPre will be limited.");
 	}
 	else smutils->LogError(myself, "Failed to get GiveNamedItem offset, Hook GiveNamedItemPre will be unavailable.");
 }
@@ -445,7 +446,7 @@ void CForwardManager::GiveNamedItemPre::Shutdown()
 
 void CForwardManager::GiveNamedItemPre::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -679,7 +680,7 @@ bool CForwardManager::ClientVoiceToPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientVoiceToPre::UpdateHook()
 {
-	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -776,7 +777,7 @@ bool CForwardManager::ClientVoiceToPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientVoiceToPost::UpdateHook()
 {
-	if (g_pCPlayerVoiceListener && pForward->GetFunctionCount() > 0 != bHooked)
+	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -800,13 +801,13 @@ bool CForwardManager::ClientVoiceToPost::SHHook(int iReceiver, int iSender, bool
 
 void CForwardManager::ConsolePrintPre::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("ClientPrintf", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseClient::ClientPrintf", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(ClientPrintf, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
 	}
-	else smutils->LogError(myself, "Failed to get ClientPrintf offset, Hook ConsolePrintPre will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPre will be unavailable.");
 }
 
 int CForwardManager::ConsolePrintPre::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
@@ -836,13 +837,13 @@ void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 
 void CForwardManager::ConsolePrintPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("ClientPrintf", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseClient::ClientPrintf", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(ClientPrintf, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
 	}
-	else smutils->LogError(myself, "Failed to get ClientPrintf offset, Hook ConsolePrintPost will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPost will be unavailable.");
 }
 
 int CForwardManager::ConsolePrintPost::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
@@ -861,13 +862,13 @@ void CForwardManager::ConsolePrintPost::SHHook(const char* szFormat)
 
 void CForwardManager::ExecuteStringCommandPre::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("ExecuteStringCommand", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CGameClient::ExecuteStringCommand", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(ExecuteStringCommand, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
 	}
-	else smutils->LogError(myself, "Failed to get ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be unavailable.");
 }
 
 int CForwardManager::ExecuteStringCommandPre::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
@@ -897,13 +898,13 @@ bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString
 
 void CForwardManager::ExecuteStringCommandPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("ExecuteStringCommand", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CGameClient::ExecuteStringCommand", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(ExecuteStringCommand, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
 	}
-	else smutils->LogError(myself, "Failed to get ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be unavailable.");
 }
 
 int CForwardManager::ExecuteStringCommandPost::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
@@ -922,21 +923,21 @@ bool CForwardManager::ExecuteStringCommandPost::SHHook(const char* pCommandStrin
 
 void CForwardManager::ClientConnectPre::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("RejectConnection", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::RejectConnection", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(RejectConnection, iOffset, 0, 0);
 
 		iOffset = -1;
 
-		if (g_pGameConf[GameConf_PTaH]->GetOffset("ConnectClient", &iOffset))
+		if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::ConnectClient", &iOffset))
 		{
 			SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
 
-			pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
+			pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
 		}
-		else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPre will be unavailable.");
+		else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPre will be unavailable.");
 	}
-	else smutils->LogError(myself, "Failed to get RejectConnection offset, Hook ClientConnectPre will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CBaseServer::RejectConnection offset, Hook ClientConnectPre will be unavailable.");
 }
 
 void CForwardManager::ClientConnectPre::Shutdown()
@@ -968,7 +969,7 @@ bool CForwardManager::ClientConnectPre::UpdateForward(IPluginFunction* pFunc, bo
 
 void CForwardManager::ClientConnectPre::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1010,7 +1011,7 @@ static const char* ExtractPlayerName(CUtlVector<NetMsg_SplitPlayerConnect*>& pSp
 
 IClient* CForwardManager::ClientConnectPre::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
 {
-	if (nAuthProtocol == 3 && cbCookie >= sizeof(CSteamID))
+	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
 	{
 		cell_t res = Pl_Continue;
 		const CSteamID* SteamID = reinterpret_cast<const CSteamID*>(pCookie);
@@ -1048,13 +1049,13 @@ IClient* CForwardManager::ClientConnectPre::SHHook(const netadr_t& address, int 
 
 void CForwardManager::ClientConnectPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("ConnectClient", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::ConnectClient", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
 
-		pForward = pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
+		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
 	}
-	else smutils->LogError(myself, "Failed to get ConnectClient offset, Hook ClientConnectPost will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPost will be unavailable.");
 }
 
 void CForwardManager::ClientConnectPost::Shutdown()
@@ -1086,7 +1087,7 @@ bool CForwardManager::ClientConnectPost::UpdateForward(IPluginFunction* pFunc, b
 
 void CForwardManager::ClientConnectPost::UpdateHook()
 {
-	if (iOffset != -1 && pForward->GetFunctionCount() > 0 != bHooked)
+	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
 	{
 		bHooked = !bHooked;
 
@@ -1102,7 +1103,7 @@ void CForwardManager::ClientConnectPost::UpdateHook()
 
 IClient* CForwardManager::ClientConnectPost::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
 {
-	if (nAuthProtocol == 3 && cbCookie >= sizeof(CSteamID))
+	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
 	{
 		IClient* pClient = META_RESULT_ORIG_RET(IClient*);
 
@@ -1131,13 +1132,13 @@ CForwardManager::SendInventoryUpdateEventPost::SendInventoryUpdateEventPost()
 
 void CForwardManager::SendInventoryUpdateEventPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("SendInventoryUpdateEvent", &iOffset))
+	if (g_pGameConf[GameConf_PTaH]->GetOffset("CPlayerInventory::SendInventoryUpdateEvent", &iOffset))
 	{
 		SH_MANUALHOOK_RECONFIGURE(SendInventoryUpdateEvent, iOffset, 0, 0);
 
 		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_Cell);
 	}
-	else smutils->LogError(myself, "Failed to get SendInventoryUpdateEvent offset, Hook InventoryUpdatePost will be unavailable.");
+	else smutils->LogError(myself, "Failed to get CPlayerInventory::SendInventoryUpdateEvent offset, Hook InventoryUpdatePost will be unavailable.");
 }
 
 void CForwardManager::SendInventoryUpdateEventPost::Hook(int iClient)

@@ -22,14 +22,14 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FORWARDS_H_
 
 #include "extension.h"
+#include "natives.h"
 #include "netmessages.pb.h"
 
 
 template <int Type, class NetMessage, int Group, bool reliable>
 class CNetMessagePB : public INetMessage, public NetMessage {
 public:
-	~CNetMessagePB() {}
-
+	~CNetMessagePB() { }
 };
 
 typedef CNetMessagePB<16, CCLCMsg_SplitPlayerConnect, 0, true>	NetMsg_SplitPlayerConnect;
