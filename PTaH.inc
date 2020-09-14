@@ -5,7 +5,7 @@
 
 
 
-#define PTaH_AVATAR_SIZE 64*64*3
+#define PTaH_AVATAR_SIZE 64 * 64 * 3		// Height * Width * Pixel cell
 
 enum PTaH_HookType
 {
@@ -41,10 +41,10 @@ enum PTaH_ModelType
 
 enum EStickerAttributeType 
 {
-	EStickerAttribute_ID = 0,		// int
-	EStickerAttribute_Wear,		// float
-	EStickerAttribute_Scale,		// float
-	EStickerAttribute_Rotation	// float
+	EStickerAttribute_ID = 0,   // int
+	EStickerAttribute_Wear,     // float
+	EStickerAttribute_Scale,    // float
+	EStickerAttribute_Rotation  // float
 };
 
 enum ESchemaAttributeType
@@ -80,15 +80,16 @@ enum EEconItemQuality
 
 enum eEconItemFlags
 {
-	kEconItemFlag_CannotTrade				= 1 << 0,
-	kEconItemFlag_CannotBeUsedInCrafting	= 1 << 1,
-	kEconItemFlag_CanBeTradedByFreeAccounts	= 1 << 2,
-	kEconItemFlag_NonEconomy				= 1 << 3,		// used for items that are meant to not interact in the economy -- these can't be traded, gift-wrapped, crafted, etc.
-	// combination of the above flags used in code
-	kEconItemFlags_CheckFlags_CannotTrade			= kEconItemFlag_CannotTrade,
-	kEconItemFlags_CheckFlags_NotUsableInCrafting	= kEconItemFlag_CannotBeUsedInCrafting,
+	kEconItemFlag_CannotTrade                       = 1 << 0,
+	kEconItemFlag_CannotBeUsedInCrafting            = 1 << 1,
+	kEconItemFlag_CanBeTradedByFreeAccounts         = 1 << 2,
+	kEconItemFlag_NonEconomy                        = 1 << 3,	// Used for items that are meant to not interact in the economy -- these can't be traded, gift-wrapped, crafted, etc.
 
-	kEconItemFlags_CheckFlags_AllGCFlags			= kEconItemFlags_CheckFlags_CannotTrade | kEconItemFlags_CheckFlags_NotUsableInCrafting,
+	// Combination of the above flags used in code.
+	kEconItemFlags_CheckFlags_CannotTrade           = kEconItemFlag_CannotTrade,
+	kEconItemFlags_CheckFlags_NotUsableInCrafting   = kEconItemFlag_CannotBeUsedInCrafting,
+
+	kEconItemFlags_CheckFlags_AllGCFlags            = kEconItemFlags_CheckFlags_CannotTrade | kEconItemFlags_CheckFlags_NotUsableInCrafting,
 };
 
 enum eEconItemRarity
@@ -168,19 +169,31 @@ enum CCSPlayerInventory
 
 
 
-methodmap CEconItemDefinition
+methodmap CEconItemDefinition	// < Address
 {
 	// CEconItemDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
 	// Always check, if not wounded CEconItemDefinition - NULL ( if(pItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
 
 	/**
-	 * Gets DefinitionIndex.
+	 * Gets the definition index.
 	 *
 	 * @return             Returns definition index.
 	 *
 	 * @error              CEconItemDefinition == NULL.
 	 */
 	public native int GetDefinitionIndex();
+
+	/**
+	 * Gets the item definition name.
+	 *
+	 * @param sBuffer      Destination string buffer.
+	 * @param iLen         Maximum length of output string buffer.
+	 *
+	 * @return             Returns length or 0 if failed.
+	 *
+	 * @error              CEconItemDefinition == NULL.
+	 */
+	public native int GetDefinitionName(char[] sBuffer, int iLen);
 
 	/**
 	 * Gets LoadoutSlot.
@@ -192,11 +205,18 @@ methodmap CEconItemDefinition
 	 * @error              CEconItemDefinition == NULL.
 	 */
 	public native int GetLoadoutSlot(int iTeam = 0);
-	
+
+	/**
+	 * Gets the used by team.
+	 *
+	 * @return             Returns team index or 0 if both team.
+	 */
 	public native int GetUsedByTeam();
 
 	/**
 	 * Gets the amount slot for stickers.
+	 * @note On agents, places are counted according
+	 *       to patch locations on the model.
 	 *
 	 * @return             Returns sticker slot count.
 	 *
@@ -205,7 +225,7 @@ methodmap CEconItemDefinition
 	public native int GetNumSupportedStickerSlots();
 
 	/**
-	 * Gets item econ image path in resource/flash/.
+	 * Gets the item econ image path in resource/flash/.
 	 * Example: "econ/weapons/base_weapons/weapon_knife"
 	 *
 	 * @note Add ".png" in the end of string for full formatting.
@@ -220,7 +240,7 @@ methodmap CEconItemDefinition
 	public native int GetEconImage(char[] sBuffer, int iLen);
 
 	/**
-	 * Gets item model path.
+	 * Gets the item model path.
 	 *
 	 * @param iModelType   Model type.
 	 * @param sBuffer      Destination string buffer.
@@ -234,15 +254,9 @@ methodmap CEconItemDefinition
 	public native int GetModel(PTaH_ModelType iModelType, char[] sBuffer, int iLen);
 
 	/**
-	 * Gets item classname.
-	 *
-	 * @param sBuffer      Destination string buffer.
-	 * @param iLen         Maximum length of output string buffer.
-	 *
-	 * @return             Returns length or 0 if failed.
-	 *
-	 * @error              CEconItemDefinition == NULL.
+	 * @deprecated Use CEconItemDefinition::GetDefinitionName() for get the definition name. Will be removed.
 	 */
+	#pragma deprecated Use CEconItemDefinition::GetDefinitionName() instead
 	public native int GetClassName(char[] sBuffer, int iLen);
 };
 
@@ -250,11 +264,35 @@ methodmap CEconItemAttributeDefinition
 {
 	// CEconItemAttributeDefinition is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
 	// Always check, if not wounded CEconItemAttributeDefinition - NULL ( if(pItemAttributeDefinition) ) !!!!!!!!!!!!!!!!!!!!!
-	
+
+	/**
+	 * Gets the definition index.
+	 *
+	 * @return             Returns definition index.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native int GetDefinitionIndex();
-	
+
+	/**
+	 * Gets the definition attribute name.
+	 *
+	 * @param sBuffer      Destination string buffer.
+	 * @param iLen         Maximum length of output string buffer.
+	 *
+	 * @return             Returns definition index.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native int GetDefinitionName(char[] sBuffer, int iLen);
-	
+
+	/**
+	 * Gets the attribute type.
+	 *
+	 * @return             Returns attribute type index.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native ESchemaAttributeType GetAttributeType();
 };
 
@@ -262,25 +300,34 @@ methodmap CEconItemAttribute
 {
 	// CEconItemAttribute is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
 	// Always check, if not wounded CEconItemAttribute - NULL ( if(pItemAttribute) ) !!!!!!!!!!!!!!!!!!!!!
-	
+
+	// Returns the definition index.
 	property int DefinitionIndex
 	{
 		public native get();
 	}
+
+	// Returns or sets attribute current value.
 	property any Value
 	{
 		public native set(any Value);
 		public native get();
 	}
+
+	// Returns the attribute initial value.
 	property any InitialValue
 	{
 		public native get();
 	}
+
+	// None.
 	property int RefundableCurrency
 	{
 		public native set(int RefundableCurrency);
 		public native get();
 	}
+
+	// Returns or sets the setbonus flag.
 	property bool SetBonus
 	{
 		public native set(bool SetBonus);
@@ -288,25 +335,89 @@ methodmap CEconItemAttribute
 	}
 };
 
-methodmap CAttributeList
+methodmap CAttributeList	// < Address
 {
 	// CAttributeList is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
 	// Always check, if not wounded CAttributeList - NULL ( if(pAttributeList) ) !!!!!!!!!!!!!!!!!!!!!
-	
+
+	/**
+	 * Removes all attributes from the list.
+	 *
+	 * @noreturn
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native void DestroyAllAttributes();
+
+	/**
+	 * Gets the attributes count in the list.
+	 *
+	 * @return             Returns the attributes count.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native int GetAttributesCount();
+
+	/**
+	 * Gets the attribute by index.
+	 *
+	 * @return             Returns the pointer in CEconItemAttribute.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native CEconItemAttribute GetAttribute(int iIndex);
-	public native CEconItemAttribute GetAttributeByDefIndex(int iAttrDefIndex);
+
+	/**
+	 * Gets the attribute by definition index.
+	 *
+	 * @param iDefIndex    Attribute definition index.
+	 *
+	 * @return             Returns the pointer in CEconItemAttribute.
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
+	public native CEconItemAttribute GetAttributeByDefIndex(int iDefIndex);
+
+	/**
+	 * Removes the attribute by index.
+	 *
+	 * @param              Attribute index in list.
+	 *
+	 * @noreturn
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
 	public native void RemoveAttribute(int iIndex);
-	public native void RemoveAttributeByDefIndex(int iAttrDefIndex);
-	public native void SetOrAddAttributeValue(int iAttrDefIndex, any aValue);
+
+	/**
+	 * Removes the attribute by definition index.
+	 *
+	 * @param iDefIndex    Attribute definition index.
+	 *
+	 * @noreturn
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
+	public native void RemoveAttributeByDefIndex(int iDefIndex);
+
+	/**
+	 * Sets ot adds the attribute value by definition index.
+	 *
+	 * @param iDefIndex    Attribute definition index.
+	 * @param Value        Attribute value.
+	 *
+	 * @noreturn
+	 *
+	 * @error              CEconItemAttributeDefinition == NULL.
+	 */
+	public native void SetOrAddAttributeValue(int iDefIndex, any Value);
 };
 
 
-methodmap CEconItemView
+methodmap CEconItemView	// < Address
 {
 	// CEconItemView is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
-	// Always check, if not wounded CEconItemDefinition - NULL ( if(pEconItemView) ) !!!!!!!!!!!!!!!!!!!!!
+	// Always check, if not wounded CEconItemDefinition - NULL ( if(pItemDefinition) ) !!!!!!!!!!!!!!!!!!!!!
 	// If a player will left from a server after function call to obtain CEconItemView (PTaH_GetEconItemViewFromEconEntity this applies if iEntity will be destroyed). You get crash server!!!!!!!!!!!!!!!!!!!!!
 	
 	/**
@@ -319,7 +430,7 @@ methodmap CEconItemView
 	public native int GetCustomPaintKitIndex();
 
 	/**
-	 * Gets displacement of skin.
+	 * Gets the displacement of skin.
 	 *
 	 * @return             Returns PaintKit seed.
 	 *
@@ -328,7 +439,7 @@ methodmap CEconItemView
 	public native int GetCustomPaintKitSeed();
 
 	/**
-	 * Gets quality of skins.
+	 * Gets the quality of skins.
 	 *
 	 * @param fDef         Default value if PaintKit is not found.
 	 *
@@ -339,13 +450,13 @@ methodmap CEconItemView
 	public native float GetCustomPaintKitWear(float flDef = -1.0);
 
 	/**
-	 * Get sticker index by slot.
+	 * Gets the sticker index by slot.
 	 *
 	 * @param iSlot	       Sticker slot index.
 	 * @param ESAT         Sticker attribute type.
 	 * @param Def          Default value if sticker is not found.
 	 *
-	 * @return             Returns attribute value.
+	 * @return             Returns the attribute value.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
@@ -372,7 +483,7 @@ methodmap CEconItemView
 	/**
 	 * Gets CEconItemDefinition.
 	 *
-	 * @return             Returns pointer in CEconItemDefinition.
+	 * @return             Returns the pointer in CEconItemDefinition.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
@@ -399,13 +510,13 @@ methodmap CEconItemView
 	public native void GetItemID(int iItemID[2]);
 
 	/**
-	 * Gets owner of ItemView.
+	 * Gets the owner of ItemView.
 	 *
-	 * @return             Returns client index or -1 is not found.
+	 * @return             Returns the client index or -1 is not found.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
-	public int GetClientIndex() 
+	public int GetClientIndex()
 	{ 
 		int iAccountID = this.GetAccountID();
 		
@@ -427,7 +538,7 @@ methodmap CEconItemView
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
-	public bool IsCustomItemView() 
+	public bool IsCustomItemView()
 	{
 		int iAccountID = this.GetAccountID();
 
@@ -437,7 +548,7 @@ methodmap CEconItemView
 	/**
 	 * Gets EconItem quality.
 	 *
-	 * @return             Returns quality.
+	 * @return             Returns the quality.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
@@ -446,7 +557,7 @@ methodmap CEconItemView
 	/**
 	 * Gets EconItem rarity.
 	 *
-	 * @return             Returns rarity.
+	 * @return             Returns the rarity.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
@@ -455,7 +566,7 @@ methodmap CEconItemView
 	/**
 	 *	Gets EconItem flags.
 	 *
-	 * @return             Returns flags.
+	 * @return             Returns the flags.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
@@ -464,35 +575,36 @@ methodmap CEconItemView
 	/**
 	 * Gets EconItem origin.
 	 *
-	 * @return             Returns origin.
+	 * @return             Returns the origin.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
 	public native eEconItemOrigin GetOrigin();
 
 	/**
-	 * Gets nametag on skin.
+	 * Gets the nametag on skin.
 	 *
 	 * @param sBuffer      Destination string buffer.
-	 * @param iLen         Maximum length of output string buffer..
+	 * @param iLen         Maximum length of output string buffer.
 	 *
-	 * @return             Returns nametag length.
+	 * @return             Returns the nametag length.
 	 *
 	 * @error              CEconItemView == NULL.
 	 */
 	public native int GetCustomName(char[] sBuffer, int iLen);
 
 	/**
-	 * Gets amount StatTrak.
+	 * Gets the amount StatTrak.
 	 *
-	 * @return             Returns amount StatTrak. If -1, StatTrak attribute is not found.
+	 * @return             Returns the amount StatTrak.
+	 *                     If -1, StatTrak attribute is not found.
 	 *
 	 * @error              CEconItemView == NULL.
 	*/
 	public native int GetStatTrakKill();
 
 	/**
-	 * Gets attribute value by index.
+	 * Gets the attribute value by index.
 	 *
 	 * @param iAttribIndex  Attribute definition index.
 	 * @param Value         Variable to store value.
@@ -502,20 +614,21 @@ methodmap CEconItemView
 	 * @error               CEconItemView == NULL or iAttribIndex invalid.
 	 */
 	public native bool GetAttributeValueByIndex(int iAttribIndex, any &Value);
-	
-	
+
+	// Returns the attribute list with static attributes.
 	property CAttributeList AttributeList
 	{
 		public native get();
 	}
-	
+
+	// Returns the attribute list with dynamic attributes.
 	property CAttributeList NetworkedDynamicAttributesForDemos
 	{
 		public native get();
 	}
 };
 
-methodmap CCSPlayerInventory
+methodmap CCSPlayerInventory	// < Address
 {
 	// CCSPlayerInventory is not Handle, CloseHandle() - NOT NEEDED !!!!!!!!!!!!!!!!!!!!!
 	// Always check, if not wounded CCSPlayerInventory - NULL ( if(pPlayerInventory) ) !!!!!!!!!!!!!!!!!!!!!
@@ -526,16 +639,16 @@ methodmap CCSPlayerInventory
 	 * @param iTeamIndex    Team index.
 	 * @param iLoadoutSlot  Loadout slot index.
 	 *
-	 * @return              Returns pointer in CEconItemView.
+	 * @return              Returns the pointer in CEconItemView.
 	 *
 	 * @error               CCSPlayerInventory == NULL or team index is invalid.
 	 */
 	public native CEconItemView GetItemInLoadout(int iTeam, int iLoadoutSlot);
 
 	/**
-	 * Gets custom items count in inventory.
+	 * Gets the custom items count in inventory.
 	 *
-	 * @return              Returns items count.
+	 * @return              Returns the items count.
 	 *
 	 * @error               CCSPlayerInventory == NULL.
 	 */
@@ -544,9 +657,9 @@ methodmap CCSPlayerInventory
 	/**
 	 * Gets CEconItemView in inventory by index.
 	 *
-	 * @param iPos          Item position in inventor.
+	 * @param iPos          Item position in inventory.
 	 *
-	 * @return              Returns pointer in CEconItemView.
+	 * @return              Returns the pointer in CEconItemView.
 	 *
 	 * @error               CCSPlayerInventory == NULL.
 	 */
@@ -573,7 +686,7 @@ typeset PTaHCB
 	 *                      Return Plugin_Continue for allow issuance item without changes.
 	 *                      Return Plugin_Changed for allow issuance item with changes.
 	 */
-	function Action (int iClient, char sClassname[64], CEconItemView &bItemView, bool &bIgnoredView, bool &bOriginNULL, float vecOrigin[3]);
+	function Action (int iClient, char sClassname[64], CEconItemView &pItemView, bool &bIgnoredView, bool &bOriginNULL, float vecOrigin[3]);
 
 	/** GiveNamedItemPost
 	 *
@@ -668,7 +781,7 @@ typeset PTaHCB
 
 	/** ConsolePrintPre
 	 *
-	 * Called before displaying messages to the console player.
+	 * Called before displaying messages to the player console.
 	 *
 	 * @param iClient       Client index.
 	 * @param sMessage      Text message.
@@ -682,7 +795,7 @@ typeset PTaHCB
 
 	/** ConsolePrintPost
 	 *
-	 * Called after displaying messages to the console player.
+	 * Called after displaying messages to the player console.
 	 *
 	 * @param iClient       Client index.
 	 * @param sMessage      Message text.
@@ -693,7 +806,7 @@ typeset PTaHCB
 
 	/** ExecuteStringCommandPre
 	 *
-	 * Called before executing the command player of the team on the server.
+	 * Called before executing the player command of the team on the server.
 	 *
 	 * @param iClient       Client index.
 	 * @param sCommand      Execute command.
@@ -706,7 +819,7 @@ typeset PTaHCB
 
 	/** ExecuteStringCommandPost
 	 *
-	 * Called after executing the command player of the server.
+	 * Called after executing the player command of the server.
 	 *
 	 * @param iClient       Client index.
 	 * @param sCommand      Execute command.
@@ -782,16 +895,16 @@ native int PTaH_Version(char[] sBuffer = NULL_STRING, int iLen = 0);
 native bool PTaH(PTaH_HookEvent EventType, PTaH_HookType HookType, PTaHCB Callback);
 
 /**
- * Gets CEconItemDefinition from name.
+ * Gets CEconItemDefinition by definition name.
  *
- * @param sDefName      Definition name.
+ * @param sDefName      Item definition name.
  *
  * @return              Returns pointer in CEconItemDefinition.
  */
 native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sDefName);
 
 /**
- * Gets CEconItemDefinition from definition index.
+ * Gets CEconItemDefinition by definition index.
  *
  * @param iDefIndex     Definition index.
  *
@@ -799,8 +912,22 @@ native CEconItemDefinition PTaH_GetItemDefinitionByName(const char[] sDefName);
  */
 native CEconItemDefinition PTaH_GetItemDefinitionByDefIndex(int iDefIndex);
 
+/**
+ * Gets CEconItemAttributeDefinition by definition name.
+ *
+ * @param sDefName      Attribute definition name.
+ *
+ * @return              Returns CEconItemAttributeDefinition.
+ */
 native CEconItemAttributeDefinition PTaH_GetAttributeDefinitionByName(const char[] sDefName);
 
+/**
+ * Gets CEconItemAttributeDefinition by definition index.
+ *
+ * @param iDefIndex     Attribute definition index.
+ *
+ * @return              Returns CEconItemAttributeDefinition.
+ */
 native CEconItemAttributeDefinition PTaH_GetAttributeDefinitionByDefIndex(int iDefIndex);
 
 /**
@@ -849,7 +976,7 @@ native int PTaH_GivePlayerItem(int iClient, const char[] sClassname, CEconItemVi
  *
  * @noreturn
  *
- * @error               Invalid client index.
+ * @error               Invalid client index, or client is fake.
  */
 native void PTaH_ForceFullUpdate(int iClient);
 
@@ -887,11 +1014,32 @@ native int PTaH_SpawnItemFromDefIndex(int iDefIndex, const float vecOrigin[3], c
  */
 native void PTaH_FX_FireBullets(int iClient, CEconItemView pItemView, const float vecOrigin[3], const float flAngles[3], int iMode, int iSeed, float flInaccuracy, float flSpread, float flFishtail, int iSoundType, float flRecoilIndex);
 
-native bool PTaH_SetPlayerAvatar(int iClient, int iTarget = -1, const char AvatarValue[PTaH_AVATAR_SIZE]);
+/**
+ * Sets the player avatar for targets.
+ * @note As a converter, use image with size 64x64
+ *       cl_avatar_convert_rgb - for convert avatars/image.png files to avatars/image.rgb .
+ *
+ * @param iClient       Client index.
+ * @param iTargets      Array containing player indexes to avatar broadcast.
+ *                      Target must be connected and not fake client.
+ * @param iTargetCount  Count of targets in the array.
+ * @param Avatar        Contents of .rgb file.
+ *
+ * @return              Is avatar sets.
+ *
+ * @error               Invalid client index, or client or target is fake.
+ */
+native bool PTaH_SetPlayerAvatar(int iClient, const int[] iTargets, int iTargetCount, const char Avatar[PTaH_AVATAR_SIZE]);
 
+/**
+ * @deprecated Use CCSPlayerInventory::GetItemInLoadout() for get LoadoutSlot. Will be removed.
+ */
 #pragma deprecated Use CCSPlayerInventory::GetItemInLoadout() instead
 native CEconItemView PTaH_GetItemInLoadout(int iClient, int iTeam, int iLoadoutSlot);
 
+/**
+ * @deprecated Use PTaH_GetEconItemViewFromEconEntity() for get CEconItemView from entity. Will be removed.
+ */
 #pragma deprecated Use PTaH_GetEconItemViewFromEconEntity() instead
 native CEconItemView PTaH_GetEconItemViewFromWeapon(int iEntity);
 
@@ -928,12 +1076,16 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("PTaH_ForceFullUpdate");
 	MarkNativeAsOptional("PTaH_SpawnItemFromDefIndex");
 	MarkNativeAsOptional("PTaH_FX_FireBullets");
+	MarkNativeAsOptional("PTaH_SetPlayerAvatar");
+
 	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionIndex");
+	MarkNativeAsOptional("CEconItemDefinition.GetDefinitionName");
 	MarkNativeAsOptional("CEconItemDefinition.GetLoadoutSlot");
+	MarkNativeAsOptional("CEconItemDefinition.GetUsedByTeam");
 	MarkNativeAsOptional("CEconItemDefinition.GetNumSupportedStickerSlots");
 	MarkNativeAsOptional("CEconItemDefinition.GetEconImage");
 	MarkNativeAsOptional("CEconItemDefinition.GetModel");
-	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
+
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitIndex");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitSeed");
 	MarkNativeAsOptional("CEconItemView.GetCustomPaintKitWear");
@@ -952,9 +1104,11 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemView.GetAttributeValueByIndex");
 	MarkNativeAsOptional("CEconItemView.AttributeList.get");
 	MarkNativeAsOptional("CEconItemView.NetworkedDynamicAttributesForDemos.get");
+
 	MarkNativeAsOptional("CCSPlayerInventory.GetItemInLoadout");
 	MarkNativeAsOptional("CCSPlayerInventory.GetItemsCount");
 	MarkNativeAsOptional("CCSPlayerInventory.GetItem");
+
 	MarkNativeAsOptional("CAttributeList.DestroyAllAttributes");
 	MarkNativeAsOptional("CAttributeList.GetAttributesCount");
 	MarkNativeAsOptional("CAttributeList.GetAttribute");
@@ -962,6 +1116,7 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CAttributeList.RemoveAttribute");
 	MarkNativeAsOptional("CAttributeList.RemoveAttributeByDefIndex");
 	MarkNativeAsOptional("CAttributeList.SetOrAddAttributeValue");
+
 	MarkNativeAsOptional("CEconItemAttribute.DefinitionIndex.get");
 	MarkNativeAsOptional("CEconItemAttribute.Value.set");
 	MarkNativeAsOptional("CEconItemAttribute.Value.get");
@@ -970,11 +1125,13 @@ public __ext_PTaH_SetNTVOptional()
 	MarkNativeAsOptional("CEconItemAttribute.RefundableCurrency.get");
 	MarkNativeAsOptional("CEconItemAttribute.SetBonus.set");
 	MarkNativeAsOptional("CEconItemAttribute.SetBonus.get");
+
 	MarkNativeAsOptional("CEconItemAttributeDefinition.GetDefinitionIndex");
 	MarkNativeAsOptional("CEconItemAttributeDefinition.GetDefinitionName");
 	MarkNativeAsOptional("CEconItemAttributeDefinition.GetAttributeType");
 
 	// Deprecated
+	MarkNativeAsOptional("CEconItemDefinition.GetClassName");
 	MarkNativeAsOptional("PTaH_GetItemInLoadout");
 	MarkNativeAsOptional("PTaH_GetEconItemViewFromWeapon");
 }
