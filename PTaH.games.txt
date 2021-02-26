@@ -74,8 +74,8 @@
 			}
 			"CCStrike15ItemDefinition::m_vbClassUsability"
 			{
-				"windows"       "616"
-				"linux"         "616"
+				"windows"       "648"
+				"linux"         "648"
 			}
 			"CEconItemDefinition::GetNumSupportedStickerSlots"
 			{
@@ -104,8 +104,8 @@
 			}
 			"CEconItemDefinition::m_pszDefinitionName"
 			{
-				"windows"       "444"
-				"linux"         "444"
+				"windows"       "476"
+				"linux"         "476"
 			}
 			"CGameClient::UpdateAcknowledgedFramecount"
 			{
