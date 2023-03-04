@@ -319,40 +319,14 @@ void CForwardManager::TempleHookVP::UpdateHook()
 	}
 }
 
-void CForwardManager::TempleHookCGameClient::Hook(int iClient)
+void CForwardManager::TempleHookBaseClient::Hook(int iClient)
 {
 	if (bHooked && iHookId == -1)
 	{
 		IClient* pClient = iserver->GetClient(iClient - 1);
-		CGameClient* pGameClient = __IClientToGameClient(pClient);
 
-		iHookId = __SH_ADD_MANUALVPHOOK(pGameClient);
+		iHookId = __SH_ADD_MANUALVPHOOK(static_cast<CBaseClient*>(pClient));
 	}
-}
-
-inline CGameClient* CForwardManager::TempleHookCGameClient::__IClientToGameClient(IClient* pClient)
-{
-#ifdef PLATFORM_WINDOWS
-	//All hooks while only 1 table because of it it is not necessary to take away
-	//.??_R4CGameClient@@6B@_0 dd 0
-	//signature
-	//                 dd 4; offset of this vtable in complete class (from top)
-	//                 dd 0; offset of constructor displacement
-	//                 dd offset ? ? _R0 ? AVCGameClient@@@8; reference to type description
-	//                 dd offset ? ? _R3CGameClient@@8; reference to hierarchy description
-	return reinterpret_cast<CGameClient*>(pClient);
-#else
-	return IClientToGameClient(pClient);
-#endif
-}
-
-inline IClient* CForwardManager::TempleHookCGameClient::__GameClientToIClient(CGameClient* pGameClient)
-{
-#ifdef PLATFORM_WINDOWS
-	return reinterpret_cast<IClient*>(pGameClient);
-#else
-	return pGameClient->ToIClient();
-#endif
 }
 
 DETOUR_DECL_MEMBER4(CCSPlayer_FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bMustBeTeamSpecific, CUtlVector<CEconItemView*>&, matchingWeapons)
@@ -810,9 +784,9 @@ void CForwardManager::ConsolePrintPre::Init()
 	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPre will be unavailable.");
 }
 
-int CForwardManager::ConsolePrintPre::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
+int CForwardManager::ConsolePrintPre::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
 {
-	return SH_ADD_MANUALVPHOOK(ClientPrintf, pGameClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
+	return SH_ADD_MANUALVPHOOK(ClientPrintf, pBaseClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
 }
 
 void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
@@ -822,7 +796,7 @@ void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 
 	V_strncpy(cMsg, szFormat, sizeof(cMsg));
 
-	pForward->PushCell(__GameClientToIClient(META_IFACEPTR(CGameClient))->GetPlayerSlot() + 1);
+	pForward->PushCell(META_IFACEPTR(CBaseClient)->GetPlayerSlot() + 1);
 	pForward->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	pForward->Execute(&res);
 
@@ -846,14 +820,14 @@ void CForwardManager::ConsolePrintPost::Init()
 	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPost will be unavailable.");
 }
 
-int CForwardManager::ConsolePrintPost::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
+int CForwardManager::ConsolePrintPost::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
 {
-	return SH_ADD_MANUALVPHOOK(ClientPrintf, pGameClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
+	return SH_ADD_MANUALVPHOOK(ClientPrintf, pBaseClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
 }
 
 void CForwardManager::ConsolePrintPost::SHHook(const char* szFormat)
 {
-	pForward->PushCell(__GameClientToIClient(META_IFACEPTR(CGameClient))->GetPlayerSlot() + 1);
+	pForward->PushCell(META_IFACEPTR(CBaseClient)->GetPlayerSlot() + 1);
 	pForward->PushString(szFormat);
 	pForward->Execute(nullptr);
 
@@ -871,9 +845,9 @@ void CForwardManager::ExecuteStringCommandPre::Init()
 	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be unavailable.");
 }
 
-int CForwardManager::ExecuteStringCommandPre::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
+int CForwardManager::ExecuteStringCommandPre::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
 {
-	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, pGameClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
+	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, static_cast<CGameClient*>(pBaseClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
 }
 
 bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString)
@@ -883,7 +857,7 @@ bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString
 
 	V_strncpy(cMsg, pCommandString, sizeof(cMsg));
 
-	pForward->PushCell(__GameClientToIClient(META_IFACEPTR(CGameClient))->GetPlayerSlot() + 1);
+	pForward->PushCell(META_IFACEPTR(CGameClient)->GetPlayerSlot() + 1);
 	pForward->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	pForward->Execute(&res);
 
@@ -907,14 +881,14 @@ void CForwardManager::ExecuteStringCommandPost::Init()
 	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be unavailable.");
 }
 
-int CForwardManager::ExecuteStringCommandPost::__SH_ADD_MANUALVPHOOK(CGameClient* pGameClient)
+int CForwardManager::ExecuteStringCommandPost::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
 {
-	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, pGameClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
+	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, static_cast<CGameClient*>(pBaseClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
 }
 
 bool CForwardManager::ExecuteStringCommandPost::SHHook(const char* pCommandString)
 {
-	pForward->PushCell(__GameClientToIClient(META_IFACEPTR(CGameClient))->GetPlayerSlot() + 1);
+	pForward->PushCell(META_IFACEPTR(CGameClient)->GetPlayerSlot() + 1);
 	pForward->PushString(pCommandString);
 	pForward->Execute(nullptr);
 

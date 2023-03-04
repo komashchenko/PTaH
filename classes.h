@@ -24,7 +24,9 @@
 #include "utlhashmaplarge.h"
 #include "netmessages.pb.h"
 #include "inetchannelinfo.h"
+#include "igameevents.h"
 
+typedef CBaseEntity CBaseCombatWeapon;
 class CAttribute_String;
 class stickerMaterialReference_t;
 enum eEconItemOrigin { };
@@ -51,7 +53,7 @@ enum ESchemaAttributeType
 class ISchemaAttributeType
 {
 protected:
-	virtual ~ISchemaAttributeType() { }
+	virtual ~ISchemaAttributeType() = 0;
 };
 
 template<typename T> class ISchemaAttributeTypeBase : public ISchemaAttributeType {};
@@ -351,16 +353,21 @@ public:
 	bool IsPlayerSpeaking(int iClient);
 };
 
-class CGameClient
+class CBaseClient : public IGameEventListener2, public IClient
 {
 public:
-	inline IClient* ToIClient()
-	{
-		return (IClient*)((intptr_t)this + sizeof(void*));
-	}
+	virtual ~CBaseClient() = 0;
 };
 
-#define IClientToGameClient(pClient) (CGameClient*)((intptr_t)(pClient) - sizeof(void*))
+class CClientFrameManager
+{
+public:
+	virtual ~CClientFrameManager() = 0;
+};
+
+class CGameClient : public CBaseClient, public CClientFrameManager
+{
+};
 
 class CCSPlayerInventory
 {

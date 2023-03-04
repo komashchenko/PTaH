@@ -302,7 +302,7 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 	}
 
 	IClient* pClient = iserver->GetClient(params[1] - 1);
-	CGameClient* pGameClient = IClientToGameClient(pClient);
+	CGameClient* pGameClient = static_cast<CGameClient*>(pClient);
 
 	((bool(VCallingConvention*)(void*, int))(*(void***)pGameClient)[offset])(pGameClient, -1);
 

@@ -23,6 +23,7 @@
 
 #include "extension.h"
 #include "natives.h"
+#include "classes.h"
 #include "netmessages.pb.h"
 
 
@@ -94,15 +95,13 @@ public: // IPluginsListener
 		bool bInGame = false;
 	};
 
-	class TempleHookCGameClient : public TempleHookVP
+	class TempleHookBaseClient : public TempleHookVP
 	{
 	public:
 		virtual void Hook(int iClient) override;
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) = 0; //Crutch
-		inline CGameClient* __IClientToGameClient(IClient* pClient);
-		inline IClient* __GameClientToIClient(CGameClient* pGameClient);
+		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) = 0; //Crutch
 	};
 
 	class GiveNamedItemPre : public TempleHookClient
@@ -211,46 +210,46 @@ public: // IPluginsListener
 		bool bHooked = false;
 	} ClientVoiceToPost;
 
-	class ConsolePrintPre : public TempleHookCGameClient
+	class ConsolePrintPre : public TempleHookBaseClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
 
 		void SHHook(const char* szFormat);
 	} ConsolePrintPre;
 
-	class ConsolePrintPost : public TempleHookCGameClient
+	class ConsolePrintPost : public TempleHookBaseClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
 
 		void SHHook(const char* szFormat);
 	} ConsolePrintPost;
 
-	class ExecuteStringCommandPre : public TempleHookCGameClient
+	class ExecuteStringCommandPre : public TempleHookBaseClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
 
 		bool SHHook(const char* pCommandString);
 	} ExecuteStringCommandPre;
 
-	class ExecuteStringCommandPost : public TempleHookCGameClient
+	class ExecuteStringCommandPost : public TempleHookBaseClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CGameClient* pGameClient) override;
+		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
 
 		bool SHHook(const char* pCommandString);
 	} ExecuteStringCommandPost;
