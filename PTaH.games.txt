@@ -112,16 +112,6 @@
 				"windows"       "17"
 				"linux"         "55"
 			}
-			"CGameClient::ExecuteStringCommand"
-			{
-				"windows"       "30"
-				"linux"         "25"
-			}
-			"CBaseClient::ClientPrintf"
-			{
-				"windows"       "32"
-				"linux"         "27"
-			}
 			"CPlayerInventory::SendInventoryUpdateEvent"
 			{
 				"windows"       "16"

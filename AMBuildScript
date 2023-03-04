@@ -168,6 +168,7 @@ class ExtensionConfig(object):
       '-fno-threadsafe-statics',
       '-Wno-non-virtual-dtor',
       '-Wno-overloaded-virtual',
+      '-Wno-reinterpret-base-class',
       '-fvisibility-inlines-hidden',
     ]
     cxx.linkflags += ['-m32']

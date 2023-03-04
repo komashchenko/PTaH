@@ -89,19 +89,26 @@ public: // IPluginsListener
 		IChangeableForward* pForward = nullptr;
 
 		int iHookId = -1;
+#ifdef PLATFORM_LINUX
+		int iGameHookId = -1;
+#endif
 		bool bHooked = false;
 		int iOffset = -1;
 
 		bool bInGame = false;
 	};
 
-	class TempleHookBaseClient : public TempleHookVP
+	class TempleHookIClient : public TempleHookVP
 	{
 	public:
 		virtual void Hook(int iClient) override;
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) = 0; //Crutch
+		virtual int __SH_ADD_VPHOOK(IClient* pClient) = 0; // Crutch
+
+#ifdef PLATFORM_LINUX
+		int GetGameClientVFuncOffset(IClient* pClient, size_t vtbIndex);
+#endif
 	};
 
 	class GiveNamedItemPre : public TempleHookClient
@@ -210,46 +217,46 @@ public: // IPluginsListener
 		bool bHooked = false;
 	} ClientVoiceToPost;
 
-	class ConsolePrintPre : public TempleHookBaseClient
+	class ConsolePrintPre : public TempleHookIClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
+		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
 
 		void SHHook(const char* szFormat);
 	} ConsolePrintPre;
 
-	class ConsolePrintPost : public TempleHookBaseClient
+	class ConsolePrintPost : public TempleHookIClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
+		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
 
 		void SHHook(const char* szFormat);
 	} ConsolePrintPost;
 
-	class ExecuteStringCommandPre : public TempleHookBaseClient
+	class ExecuteStringCommandPre : public TempleHookIClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
+		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
 
 		bool SHHook(const char* pCommandString);
 	} ExecuteStringCommandPre;
 
-	class ExecuteStringCommandPost : public TempleHookBaseClient
+	class ExecuteStringCommandPost : public TempleHookIClient
 	{
 	public:
 		void Init();
 
 	protected:
-		virtual int __SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient) override;
+		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
 
 		bool SHHook(const char* pCommandString);
 	} ExecuteStringCommandPost;

@@ -44,10 +44,16 @@ SH_DECL_HOOK3(IVoiceServer, SetClientListening, SH_NOATTRIB, 0, bool, int, int, 
 SH_DECL_HOOK1_void(IServerGameClients, ClientVoice, SH_NOATTRIB, 0, edict_t*);
 
 //ClientPrint
-SH_DECL_MANUALHOOK0_void_vafmt(ClientPrintf, 0, 0, 0);
+SH_DECL_HOOK0_void_vafmt(IClient, ClientPrintf, SH_NOATTRIB, 0);
+#ifdef PLATFORM_LINUX
+SH_DECL_MANUALHOOK0_void_vafmt(CBaseClient_ClientPrintf, 0, 0, 0);
+#endif
 
 //ExecuteStringCommand
-SH_DECL_MANUALHOOK1(ExecuteStringCommand, 0, 0, 0, bool, const char*);
+SH_DECL_HOOK1(IClient, ExecuteStringCommand, SH_NOATTRIB, 0, bool, const char*);
+#ifdef PLATFORM_LINUX
+SH_DECL_MANUALHOOK1(CGameClient_ExecuteStringCommand, 0, 0, 0, bool, const char*);
+#endif
 
 //ClientConnect
 SH_DECL_MANUALHOOK13(ConnectClient, 0, 0, 0, IClient*, const netadr_t&, int, int, int, const char*, const char*, const char*, int, CUtlVector<NetMsg_SplitPlayerConnect*>&, bool, CrossPlayPlatform_t, const unsigned char*, int);
@@ -270,6 +276,7 @@ void CForwardManager::TempleHookVP::Shutdown()
 		forwards->ReleaseForward(pForward);
 
 		if (iHookId != -1) SH_REMOVE_HOOK_ID(iHookId);
+		if (iGameHookId != -1) SH_REMOVE_HOOK_ID(iGameHookId);
 	}
 }
 
@@ -313,21 +320,83 @@ void CForwardManager::TempleHookVP::UpdateHook()
 		else if (iHookId != -1)
 		{
 			SH_REMOVE_HOOK_ID(iHookId);
-
 			iHookId = -1;
+
+#ifdef PLATFORM_LINUX
+			if(iGameHookId != -1)
+			{
+				SH_REMOVE_HOOK_ID(iGameHookId);
+				iGameHookId = -1;
+			}
+#endif
 		}
 	}
 }
 
-void CForwardManager::TempleHookBaseClient::Hook(int iClient)
+void CForwardManager::TempleHookIClient::Hook(int iClient)
 {
 	if (bHooked && iHookId == -1)
 	{
 		IClient* pClient = iserver->GetClient(iClient - 1);
 
-		iHookId = __SH_ADD_MANUALVPHOOK(static_cast<CBaseClient*>(pClient));
+		iHookId = __SH_ADD_VPHOOK(pClient);
 	}
 }
+
+#ifdef PLATFORM_LINUX
+int CForwardManager::TempleHookIClient::GetGameClientVFuncOffset(IClient *pClient, size_t vtbIndex)
+{
+	CGameClient* pGameClient = dynamic_cast<CGameClient*>(pClient);
+	
+	// Getting the trampoline function address
+	// If the function has been patched, get the original via GetOrigVfnPtrEntry
+	void* vfnPtr = *reinterpret_cast<void***>(pClient) + vtbIndex;
+	void* vfnOrigPtr = SH_GLOB_SHPTR->GetOrigVfnPtrEntry(vfnPtr);
+	uintptr_t tmplPtr = reinterpret_cast<uintptr_t>(vfnOrigPtr ? vfnOrigPtr : *reinterpret_cast<void**>(vfnPtr));
+	
+	// Checking that it is a trampoline function
+	// sub dword ptr [esp+4], 4
+	if(*reinterpret_cast<uint32_t*>(tmplPtr) != 0x4246C83)
+	{
+		return -1;
+	}
+	
+	uint8_t jmp = *reinterpret_cast<uint8_t*>(tmplPtr + 0x5);
+	//        jmp            jmp short
+	if(jmp != 0xE9 && jmp != 0xEB)
+	{
+		return -1;
+	}
+	
+	void* funcPtr;
+	// Getting the function address
+	{
+		uintptr_t jmpPtr = tmplPtr + 0x5;
+		if(jmp == 0xE9)
+		{
+			funcPtr = reinterpret_cast<void*>(jmpPtr + *reinterpret_cast<uint32_t*>(jmpPtr + 0x1) + 0x5);
+		}
+		else
+		{
+			funcPtr = reinterpret_cast<void*>(jmpPtr + *reinterpret_cast<int8_t*>(jmpPtr + 0x1) + 0x2);
+		}
+	}
+	
+	// Finding a function in the CGameClient virtual table
+	for(int i = 0; i < 90; i++)
+	{
+		void* vfnGamePtr = *reinterpret_cast<void***>(pGameClient) + i;
+		void* vfnGameOrigPtr = SH_GLOB_SHPTR->GetOrigVfnPtrEntry(vfnGamePtr);
+
+		if((vfnGameOrigPtr ? vfnGameOrigPtr : *reinterpret_cast<void**>(vfnGamePtr)) == funcPtr)
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+#endif
 
 DETOUR_DECL_MEMBER4(CCSPlayer_FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bMustBeTeamSpecific, CUtlVector<CEconItemView*>&, matchingWeapons)
 {
@@ -775,35 +844,68 @@ bool CForwardManager::ClientVoiceToPost::SHHook(int iReceiver, int iSender, bool
 
 void CForwardManager::ConsolePrintPre::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseClient::ClientPrintf", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(ClientPrintf, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPre will be unavailable.");
+	iOffset = 0xDEADC0DE;
+	pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
 }
 
-int CForwardManager::ConsolePrintPre::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
+int CForwardManager::ConsolePrintPre::__SH_ADD_VPHOOK(IClient* pClient)
 {
-	return SH_ADD_MANUALVPHOOK(ClientPrintf, pBaseClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
+#ifdef PLATFORM_LINUX
+	SourceHook::MemFuncInfo mfi;
+	SourceHook::GetFuncInfo(&IClient::ClientPrintf, mfi);
+	
+	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+	if (offset != -1)
+	{
+		SH_MANUALHOOK_RECONFIGURE(CBaseClient_ClientPrintf, offset, 0, 0);
+	
+		iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
+	}
+	else
+	{
+		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPre will be limited.");
+	}
+#endif
+
+    return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
 }
 
 void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 {
+	IClient* pClient = META_IFACEPTR(IClient);
+#ifdef PLATFORM_LINUX
+	// Checking offset to this (CGameClient 0) (IClient -4)
+	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
+	{
+		pClient = reinterpret_cast<CGameClient*>(pClient);
+	}
+#endif
+
 	cell_t res = Pl_Continue;
-	char cMsg[1024];
-
-	V_strncpy(cMsg, szFormat, sizeof(cMsg));
-
-	pForward->PushCell(META_IFACEPTR(CBaseClient)->GetPlayerSlot() + 1);
-	pForward->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	char szMsg[1024];
+	
+	V_strncpy(szMsg, szFormat, sizeof(szMsg));
+	
+	pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	pForward->PushStringEx(szMsg, sizeof(szMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	pForward->Execute(&res);
-
+	
 	if (res != Pl_Continue)
 	{
-		if (res == Pl_Changed) RETURN_META_MNEWPARAMS(MRES_HANDLED, ClientPrintf, (const_cast<const char*>(cMsg)));
-		else RETURN_META(MRES_SUPERCEDE);
+		if (res == Pl_Changed)
+		{
+#ifdef PLATFORM_LINUX
+			// If it's a CGameClient, the pointers will differ
+			if(pClient != META_IFACEPTR(IClient))
+			{
+				RETURN_META_MNEWPARAMS(MRES_HANDLED, CBaseClient_ClientPrintf, (szMsg));
+			}
+#endif
+
+			RETURN_META_NEWPARAMS(MRES_HANDLED, &IClient::ClientPrintf, (szMsg));
+		}
+
+		RETURN_META(MRES_SUPERCEDE);
 	}
 
 	RETURN_META(MRES_IGNORED);
@@ -811,23 +913,44 @@ void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 
 void CForwardManager::ConsolePrintPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseClient::ClientPrintf", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(ClientPrintf, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPost will be unavailable.");
+	iOffset = 0xDEADC0DE;
+	pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
 }
 
-int CForwardManager::ConsolePrintPost::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
+int CForwardManager::ConsolePrintPost::__SH_ADD_VPHOOK(IClient* pClient)
 {
-	return SH_ADD_MANUALVPHOOK(ClientPrintf, pBaseClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
+#ifdef PLATFORM_LINUX
+	SourceHook::MemFuncInfo mfi;
+	SourceHook::GetFuncInfo(&IClient::ClientPrintf, mfi);
+	
+	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+	if (offset != -1)
+	{
+		SH_MANUALHOOK_RECONFIGURE(CBaseClient_ClientPrintf, offset, 0, 0);
+	
+		iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
+	}
+	else
+	{
+		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPost will be limited.");
+	}
+#endif
+
+	return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
 }
 
 void CForwardManager::ConsolePrintPost::SHHook(const char* szFormat)
 {
-	pForward->PushCell(META_IFACEPTR(CBaseClient)->GetPlayerSlot() + 1);
+	IClient* pClient = META_IFACEPTR(IClient);
+#ifdef PLATFORM_LINUX
+	// Checking offset to this (CGameClient 0) (IClient -4)
+	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
+	{
+		pClient = reinterpret_cast<CGameClient*>(pClient);
+	}
+#endif
+
+	pForward->PushCell(pClient->GetPlayerSlot() + 1);
 	pForward->PushString(szFormat);
 	pForward->Execute(nullptr);
 
@@ -836,35 +959,68 @@ void CForwardManager::ConsolePrintPost::SHHook(const char* szFormat)
 
 void CForwardManager::ExecuteStringCommandPre::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CGameClient::ExecuteStringCommand", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(ExecuteStringCommand, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be unavailable.");
+	iOffset = 0xDEADC0DE;
+	pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
 }
 
-int CForwardManager::ExecuteStringCommandPre::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
+int CForwardManager::ExecuteStringCommandPre::__SH_ADD_VPHOOK(IClient* pClient)
 {
-	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, static_cast<CGameClient*>(pBaseClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
+#ifdef PLATFORM_LINUX
+	SourceHook::MemFuncInfo mfi;
+	SourceHook::GetFuncInfo(&IClient::ExecuteStringCommand, mfi);
+	
+	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+	if (offset != -1)
+	{
+		SH_MANUALHOOK_RECONFIGURE(CGameClient_ExecuteStringCommand, offset, 0, 0);
+	
+		iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
+	}
+	else
+	{
+		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be limited.");
+	}
+#endif
+
+	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
 }
 
 bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString)
 {
+	IClient* pClient = META_IFACEPTR(IClient);
+#ifdef PLATFORM_LINUX
+	// Checking offset to this (CGameClient 0) (IClient -4)
+	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
+	{
+		pClient = reinterpret_cast<CGameClient*>(pClient);
+	}
+#endif
+
 	cell_t res = Pl_Continue;
-	char cMsg[512];
+	char szCommandString[512];
 
-	V_strncpy(cMsg, pCommandString, sizeof(cMsg));
+	V_strncpy(szCommandString, pCommandString, sizeof(szCommandString));
 
-	pForward->PushCell(META_IFACEPTR(CGameClient)->GetPlayerSlot() + 1);
-	pForward->PushStringEx(cMsg, sizeof(cMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	pForward->PushStringEx(szCommandString, sizeof(szCommandString), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	pForward->Execute(&res);
 
 	if (res != Pl_Continue)
 	{
-		if (res == Pl_Changed) RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, true, ExecuteStringCommand, (const_cast<const char*>(cMsg)));
-		else RETURN_META_VALUE(MRES_SUPERCEDE, false);
+		if (res == Pl_Changed)
+		{
+#ifdef PLATFORM_LINUX
+			// If it's a CGameClient, the pointers will differ
+			if (pClient != META_IFACEPTR(IClient))
+			{
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, true, CGameClient_ExecuteStringCommand, (szCommandString));
+			}
+#endif
+
+			RETURN_META_VALUE_NEWPARAMS(MRES_HANDLED, true, &IClient::ExecuteStringCommand, (szCommandString));
+		}
+
+		RETURN_META_VALUE(MRES_SUPERCEDE, false);
 	}
 
 	RETURN_META_VALUE(MRES_IGNORED, true);
@@ -872,23 +1028,44 @@ bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString
 
 void CForwardManager::ExecuteStringCommandPost::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CGameClient::ExecuteStringCommand", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(ExecuteStringCommand, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be unavailable.");
+	iOffset = 0xDEADC0DE;
+	pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
 }
 
-int CForwardManager::ExecuteStringCommandPost::__SH_ADD_MANUALVPHOOK(CBaseClient* pBaseClient)
+int CForwardManager::ExecuteStringCommandPost::__SH_ADD_VPHOOK(IClient* pClient)
 {
-	return SH_ADD_MANUALVPHOOK(ExecuteStringCommand, static_cast<CGameClient*>(pBaseClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
+#ifdef PLATFORM_LINUX
+	SourceHook::MemFuncInfo mfi;
+	SourceHook::GetFuncInfo(&IClient::ExecuteStringCommand, mfi);
+	
+	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+	if (offset != -1)
+	{
+		SH_MANUALHOOK_RECONFIGURE(CGameClient_ExecuteStringCommand, offset, 0, 0);
+	
+		iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
+	}
+	else
+	{
+		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be limited.");
+	}
+#endif
+
+	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
 }
 
 bool CForwardManager::ExecuteStringCommandPost::SHHook(const char* pCommandString)
 {
-	pForward->PushCell(META_IFACEPTR(CGameClient)->GetPlayerSlot() + 1);
+	IClient* pClient = META_IFACEPTR(IClient);
+#ifdef PLATFORM_LINUX
+	// Checking offset to this (CGameClient 0) (IClient -4)
+	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
+	{
+		pClient = reinterpret_cast<CGameClient*>(pClient);
+	}
+#endif
+
+	pForward->PushCell(pClient->GetPlayerSlot() + 1);
 	pForward->PushString(pCommandString);
 	pForward->Execute(nullptr);
 
