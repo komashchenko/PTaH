@@ -24,350 +24,294 @@
 #include "natives.h"
 
 
+decltype(CForwardManager::m_Hooks) CForwardManager::m_Hooks;
 CForwardManager g_ForwardManager;
 
-
-//LevelShutdown
-SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, false);
-
-//GiveNamedItem
+// GiveNamedItem
 SH_DECL_MANUALHOOK5(GiveNamedItem, 0, 0, 0, CBaseEntity*, const char*, int, CEconItemView*, bool, Vector*);
 
-//WeaponCanUse
+// WeaponCanUse
 SH_DECL_MANUALHOOK1(Weapon_CanUse, 0, 0, 0, bool, CBaseCombatWeapon*);
 
-//SetModel
-SH_DECL_MANUALHOOK1(SetEntityModel, 0, 0, 0, CBaseEntity*, const char*);
+// SetModel
+SH_DECL_MANUALHOOK1_void(SetEntityModel, 0, 0, 0, const char*);
 
-//ClientVoiceTo
+// ClientVoiceTo
 SH_DECL_HOOK3(IVoiceServer, SetClientListening, SH_NOATTRIB, 0, bool, int, int, bool);
 SH_DECL_HOOK1_void(IServerGameClients, ClientVoice, SH_NOATTRIB, 0, edict_t*);
 
-//ClientPrint
+// ClientPrint
 SH_DECL_HOOK0_void_vafmt(IClient, ClientPrintf, SH_NOATTRIB, 0);
 #ifdef PLATFORM_LINUX
 SH_DECL_MANUALHOOK0_void_vafmt(CBaseClient_ClientPrintf, 0, 0, 0);
 #endif
 
-//ExecuteStringCommand
+// ExecuteStringCommand
 SH_DECL_HOOK1(IClient, ExecuteStringCommand, SH_NOATTRIB, 0, bool, const char*);
 #ifdef PLATFORM_LINUX
 SH_DECL_MANUALHOOK1(CGameClient_ExecuteStringCommand, 0, 0, 0, bool, const char*);
 #endif
 
-//ClientConnect
-SH_DECL_MANUALHOOK13(ConnectClient, 0, 0, 0, IClient*, const netadr_t&, int, int, int, const char*, const char*, const char*, int, CUtlVector<NetMsg_SplitPlayerConnect*>&, bool, CrossPlayPlatform_t, const unsigned char*, int);
-SH_DECL_MANUALHOOK1_void_vafmt(RejectConnection, 0, 0, 0, const netadr_t&);
+// ClientConnect
+SH_DECL_MANUALHOOK13(ConnectClient, 0, 0, 0, IClient*, const ns_address&, int, int, int, const char*, const char*, const char*, int, CUtlVector<CCLCMsg_SplitPlayerConnect_t*>&, bool, CrossPlayPlatform_t, const byte*, int);
 
-//InventoryUpdate
+// InventoryUpdate
 SH_DECL_MANUALHOOK0_void(SendInventoryUpdateEvent, 0, 0, 0);
 
 
 void CForwardManager::Init()
 {
-	GiveNamedItemPre.Init();
-	GiveNamedItemPost.Init();
-	WeaponCanUsePre.Init();
-	WeaponCanUsePost.Init();
-	SetPlayerModelPre.Init();
-	SetPlayerModelPost.Init();
-	ClientVoiceToPre.Init();
-	ClientVoiceToPost.Init();
-	ConsolePrintPre.Init();
-	ConsolePrintPost.Init();
-	ExecuteStringCommandPre.Init();
-	ExecuteStringCommandPost.Init();
-	ClientConnectPre.Init();
-	ClientConnectPost.Init();
-	InventoryUpdatePost.Init();
-
-	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CForwardManager::LevelShutdown), true);
-
-	playerhelpers->AddClientListener(this);
-	plsys->AddPluginsListener(this);
+	for(auto& hook : m_Hooks)
+	{
+		hook.second->Init();
+	}
 }
 
 void CForwardManager::Shutdown()
 {
-	playerhelpers->RemoveClientListener(this);
-	plsys->RemovePluginsListener(this);
-
-	SH_REMOVE_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CForwardManager::LevelShutdown), true);
-
-	for (int i = 1; i <= SM_MAXPLAYERS; i++)
+	for(auto& hook : m_Hooks)
 	{
-		OnClientDisconnected(i);
+		hook.second->Shutdown();
 	}
-
-	GiveNamedItemPre.Shutdown();
-	GiveNamedItemPost.Shutdown();
-	WeaponCanUsePre.Shutdown();
-	WeaponCanUsePost.Shutdown();
-	SetPlayerModelPre.Shutdown();
-	SetPlayerModelPost.Shutdown();
-	ClientVoiceToPre.Shutdown();
-	ClientVoiceToPost.Shutdown();
-	ConsolePrintPre.Shutdown();
-	ConsolePrintPost.Shutdown();
-	ExecuteStringCommandPre.Shutdown();
-	ExecuteStringCommandPost.Shutdown();
-	ClientConnectPre.Shutdown();
-	ClientConnectPost.Shutdown();
-	InventoryUpdatePost.Shutdown();
 }
 
-bool CForwardManager::FunctionUpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook)
+bool CForwardManager::UpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook)
 {
-	switch (htType)
+	auto hook = m_Hooks.find(htType);
+	if(hook != m_Hooks.end())
 	{
-	case PTaH_GiveNamedItemPre: return GiveNamedItemPre.UpdateForward(pFunction, bHook);
-	case PTaH_GiveNamedItemPost: return GiveNamedItemPost.UpdateForward(pFunction, bHook);
-	case PTaH_WeaponCanUsePre: return WeaponCanUsePre.UpdateForward(pFunction, bHook);
-	case PTaH_WeaponCanUsePost: return WeaponCanUsePost.UpdateForward(pFunction, bHook);
-	case PTaH_SetPlayerModelPre: return SetPlayerModelPre.UpdateForward(pFunction, bHook);
-	case PTaH_SetPlayerModelPost: return SetPlayerModelPost.UpdateForward(pFunction, bHook);
-	case PTaH_ClientVoiceToPre: return ClientVoiceToPre.UpdateForward(pFunction, bHook);
-	case PTaH_ClientVoiceToPost: return ClientVoiceToPost.UpdateForward(pFunction, bHook);
-	case PTaH_ConsolePrintPre: return ConsolePrintPre.UpdateForward(pFunction, bHook);
-	case PTaH_ConsolePrintPost: return ConsolePrintPost.UpdateForward(pFunction, bHook);
-	case PTaH_ExecuteStringCommandPre: return ExecuteStringCommandPre.UpdateForward(pFunction, bHook);
-	case PTaH_ExecuteStringCommandPost: return ExecuteStringCommandPost.UpdateForward(pFunction, bHook);
-	case PTaH_ClientConnectPre: return ClientConnectPre.UpdateForward(pFunction, bHook);
-	case PTaH_ClientConnectPost: return ClientConnectPost.UpdateForward(pFunction, bHook);
-	case PTaH_InventoryUpdatePost: return InventoryUpdatePost.UpdateForward(pFunction, bHook);
+		return hook->second->UpdateHook(pFunction, bHook);
 	}
 
 	return false;
 }
 
-void CForwardManager::LevelShutdown()
+CForwardManager::CBaseHook::CBaseHook()
 {
-	for (int i = 1; i <= SM_MAXPLAYERS; i++)
+	m_pForward = nullptr;
+	m_bHooked = false;
+}
+
+CForwardManager::CBaseHook::HookTypeRegistrator::HookTypeRegistrator(CBaseHook* pBaseHook, PTaH_HookEvent htType)
+{
+	m_Hooks[htType] = pBaseHook;
+}
+
+void CForwardManager::CBaseHook::Shutdown()
+{
+	if(m_pForward)
 	{
-		OnClientDisconnected(i);
+		if(m_bHooked)
+		{
+			OnInternalHookDeactivated();
+		}
+
+		forwards->ReleaseForward(m_pForward);
+	}
+}
+
+bool CForwardManager::CBaseHook::UpdateHook(SourcePawn::IPluginFunction* pFunction, bool bHook)
+{
+	if(m_pForward)
+	{
+		bool bRet = bHook ? m_pForward->AddFunction(pFunction) : m_pForward->RemoveFunction(pFunction);
+
+		UpdateInternalHook();
+
+		return bRet;
 	}
 
-	RETURN_META(MRES_IGNORED);
+	return false;
 }
 
-void CForwardManager::OnClientConnected(int iClient)
+void CForwardManager::CBaseHook::UpdateInternalHook()
 {
-	ConsolePrintPre.Hook(iClient);
-	ConsolePrintPost.Hook(iClient);
-	ExecuteStringCommandPre.Hook(iClient);
-	ExecuteStringCommandPost.Hook(iClient);
-}
-
-void CForwardManager::OnClientPutInServer(int iClient)
-{
-	GiveNamedItemPre.HookClient(iClient);
-	GiveNamedItemPost.HookClient(iClient);
-	WeaponCanUsePre.HookClient(iClient);
-	WeaponCanUsePost.HookClient(iClient);
-	SetPlayerModelPre.HookClient(iClient);
-	SetPlayerModelPost.HookClient(iClient);
-	InventoryUpdatePost.Hook(iClient);
-}
-
-void CForwardManager::OnClientDisconnected(int iClient)
-{
-	GiveNamedItemPre.UnHookClient(iClient);
-	GiveNamedItemPost.UnHookClient(iClient);
-	WeaponCanUsePre.UnHookClient(iClient);
-	WeaponCanUsePost.UnHookClient(iClient);
-	SetPlayerModelPre.UnHookClient(iClient);
-	SetPlayerModelPost.UnHookClient(iClient);
-}
-
-void CForwardManager::OnPluginUnloaded(IPlugin* plugin)
-{
-	GiveNamedItemPre.UpdateHook();
-	GiveNamedItemPost.UpdateHook();
-	WeaponCanUsePre.UpdateHook();
-	WeaponCanUsePost.UpdateHook();
-	SetPlayerModelPre.UpdateHook();
-	SetPlayerModelPost.UpdateHook();
-	ClientVoiceToPre.UpdateHook();
-	ClientVoiceToPost.UpdateHook();
-	ConsolePrintPre.UpdateHook();
-	ConsolePrintPost.UpdateHook();
-	ExecuteStringCommandPre.UpdateHook();
-	ExecuteStringCommandPost.UpdateHook();
-	ClientConnectPre.UpdateHook();
-	ClientConnectPost.UpdateHook();
-	InventoryUpdatePost.UpdateHook();
-}
-
-CForwardManager::TempleHookClient::TempleHookClient()
-{
-	memset(iHookId, 0xFF, sizeof(iHookId));
-}
-
-void CForwardManager::TempleHookClient::Shutdown()
-{
-	if (iOffset != -1) forwards->ReleaseForward(pForward);
-}
-
-void CForwardManager::TempleHookClient::UpdateHook()
-{
-	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
+	if(m_pForward && (m_pForward->GetFunctionCount() > 0) != m_bHooked)
 	{
-		bHooked = !bHooked;
+		m_bHooked = !m_bHooked;
 
-		int iMaxClients = playerhelpers->GetMaxClients();
-
-		if (bHooked)
+		if(m_bHooked)
 		{
-			IGamePlayer* pPlayer;
-
-			for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && pPlayer->IsInGame())
-			{
-				HookClient(i);
-			}
+			OnInternalHookActivated();
 		}
 		else
 		{
-			for (int i = 1; i <= iMaxClients; i++) UnHookClient(i);
+			OnInternalHookDeactivated();
 		}
 	}
 }
 
-void CForwardManager::TempleHookClient::HookClient(int iClient)
+void CForwardManager::CBaseHook::OnInternalHookActivated()
 {
-	if (bHooked && iHookId[iClient] == -1)
-	{
-		CBaseEntity* pEnt = gamehelpers->ReferenceToEntity(iClient);
+	plsys->AddPluginsListener(this);
+}
 
-		iHookId[iClient] = __SH_ADD_MANUALHOOK(pEnt);
+void CForwardManager::CBaseHook::OnInternalHookDeactivated()
+{
+	plsys->RemovePluginsListener(this);
+}
+
+void CForwardManager::CBaseHook::OnPluginUnloaded(IPlugin* plugin)
+{
+	UpdateInternalHook();
+}
+
+CForwardManager::CBaseManualPlayerHook::CBaseManualPlayerHook()
+{
+	memset(m_iHookID, 0xFF, sizeof(m_iHookID));
+}
+
+void CForwardManager::CBaseManualPlayerHook::OnInternalHookActivated()
+{
+	BaseClass::OnInternalHookActivated();
+	playerhelpers->AddClientListener(this);
+
+	int iMaxClients = playerhelpers->GetMaxClients();
+	IGamePlayer* pPlayer;
+	for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && pPlayer->IsInGame())
+	{
+		OnClientPutInServer(i);
 	}
 }
 
-void CForwardManager::TempleHookClient::UnHookClient(int iClient)
+void CForwardManager::CBaseManualPlayerHook::OnInternalHookDeactivated()
 {
-	if (iHookId[iClient] != -1)
-	{
-		SH_REMOVE_HOOK_ID(iHookId[iClient]);
+	BaseClass::OnInternalHookDeactivated();
+	playerhelpers->RemoveClientListener(this);
 
-		iHookId[iClient] = -1;
+	int iMaxClients = playerhelpers->GetMaxClients();
+	for (int i = 1; i <= iMaxClients; i++)
+	{
+		OnClientDisconnected(i);
 	}
 }
 
-bool CForwardManager::TempleHookClient::UpdateForward(IPluginFunction* pFunc, bool bHook)
+void CForwardManager::CBaseManualPlayerHook::OnClientPutInServer(int iClient)
 {
-	if (iOffset != -1)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
+	m_iHookID[iClient] = ManualHook(iClient);
 }
 
-void CForwardManager::TempleHookVP::Shutdown()
+void CForwardManager::CBaseManualPlayerHook::OnClientDisconnected(int iClient)
 {
-	if (iOffset != -1)
+	if(m_iHookID[iClient] != -1)
 	{
-		forwards->ReleaseForward(pForward);
-
-		if (iHookId != -1) SH_REMOVE_HOOK_ID(iHookId);
-		if (iGameHookId != -1) SH_REMOVE_HOOK_ID(iGameHookId);
+		SH_REMOVE_HOOK_ID(m_iHookID[iClient]);
+		m_iHookID[iClient] = -1;
 	}
 }
 
-bool CForwardManager::TempleHookVP::UpdateForward(IPluginFunction* pFunc, bool bHook)
+CForwardManager::CBaseVPHook::CBaseVPHook(bool bInGame)
 {
-	if (iOffset != -1)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
+	m_iHookID = -1;
+	m_bInGame = bInGame;
 }
 
-void CForwardManager::TempleHookVP::UpdateHook()
+void CForwardManager::CBaseVPHook::OnClientValid(int iClient)
 {
-	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
+	// Protection against multiple calls in the same frame
+	if(m_iHookID == -1)
 	{
-		bHooked = !bHooked;
+		m_iHookID = VPHook(iClient);
 
-		if (bHooked)
+		// Using RemoveClientListener inside the handler will cause a crash
+		smutils->AddFrameAction([](void* pThis)
 		{
-			IGamePlayer* pPlayer;
-			int iMaxClients = playerhelpers->GetMaxClients();
+			playerhelpers->RemoveClientListener(reinterpret_cast<CForwardManager::CBaseVPHook*>(pThis));
+		}, this);
+	}
+}
 
-			auto fPlayerValid = bInGame ? &IGamePlayer::IsInGame : &IGamePlayer::IsConnected;
+void CForwardManager::CBaseVPHook::OnInternalHookActivated()
+{
+	CBaseHook::OnInternalHookActivated();
 
-			for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && (pPlayer->*fPlayerValid)())
-			{
-				Hook(i);
+	auto fPlayerValid = m_bInGame ? &IGamePlayer::IsInGame : &IGamePlayer::IsConnected;
+	int iMaxClients = playerhelpers->GetMaxClients();
+	IGamePlayer* pPlayer;
+	for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && (pPlayer->*fPlayerValid)())
+	{
+		m_iHookID = VPHook(i);
 
-				return;
-			}
-		}
-		else if (iHookId != -1)
-		{
-			SH_REMOVE_HOOK_ID(iHookId);
-			iHookId = -1;
+		return;
+	}
 
+	playerhelpers->AddClientListener(this);
+}
+
+void CForwardManager::CBaseVPHook::OnInternalHookDeactivated()
+{
+	CBaseHook::OnInternalHookDeactivated();
+
+	if(m_iHookID != -1)
+	{
+		SH_REMOVE_HOOK_ID(m_iHookID);
+		m_iHookID = -1;
+	}
+	else
+	{
+		playerhelpers->RemoveClientListener(this);
+	}
+}
+
+void CForwardManager::CBaseVPHook::OnClientConnected(int iClient)
+{
+	if(!m_bInGame)
+	{
+		OnClientValid(iClient);
+	}
+}
+
+void CForwardManager::CBaseVPHook::OnClientPutInServer(int iClient)
+{
+	if(m_bInGame)
+	{
+		OnClientValid(iClient);
+	}
+}
+
+CForwardManager::CBaseClientHook::CBaseClientHook() : CBaseVPHook(false)
+{
 #ifdef PLATFORM_LINUX
-			if(iGameHookId != -1)
-			{
-				SH_REMOVE_HOOK_ID(iGameHookId);
-				iGameHookId = -1;
-			}
+	m_iGameHookId = -1;
 #endif
-		}
-	}
-}
-
-void CForwardManager::TempleHookIClient::Hook(int iClient)
-{
-	if (bHooked && iHookId == -1)
-	{
-		IClient* pClient = iserver->GetClient(iClient - 1);
-
-		iHookId = __SH_ADD_VPHOOK(pClient);
-	}
 }
 
 #ifdef PLATFORM_LINUX
-int CForwardManager::TempleHookIClient::GetGameClientVFuncOffset(IClient *pClient, size_t vtbIndex)
+void CForwardManager::CBaseClientHook::OnInternalHookDeactivated()
+{
+	CBaseHook::OnInternalHookDeactivated();
+
+	if(m_iGameHookId != -1)
+	{
+		SH_REMOVE_HOOK_ID(m_iGameHookId);
+		m_iGameHookId = -1;
+	}
+}
+
+int CForwardManager::CBaseClientHook::GetParentVFuncOffset(IClient* pClient, size_t vtbIndex)
 {
 	CGameClient* pGameClient = dynamic_cast<CGameClient*>(pClient);
-	
+
 	// Getting the trampoline function address
 	// If the function has been patched, get the original via GetOrigVfnPtrEntry
-	void* vfnPtr = *reinterpret_cast<void***>(pClient) + vtbIndex;
+	void** vfnPtr = *reinterpret_cast<void***>(pClient) + vtbIndex;
 	void* vfnOrigPtr = SH_GLOB_SHPTR->GetOrigVfnPtrEntry(vfnPtr);
-	uintptr_t tmplPtr = reinterpret_cast<uintptr_t>(vfnOrigPtr ? vfnOrigPtr : *reinterpret_cast<void**>(vfnPtr));
-	
+	uintptr_t tmplPtr = reinterpret_cast<uintptr_t>(vfnOrigPtr ? vfnOrigPtr : *vfnPtr);
+
 	// Checking that it is a trampoline function
 	// sub dword ptr [esp+4], 4
 	if(*reinterpret_cast<uint32_t*>(tmplPtr) != 0x4246C83)
 	{
 		return -1;
 	}
-	
+
 	uint8_t jmp = *reinterpret_cast<uint8_t*>(tmplPtr + 0x5);
 	//        jmp            jmp short
 	if(jmp != 0xE9 && jmp != 0xEB)
 	{
 		return -1;
 	}
-	
+
 	void* funcPtr;
 	// Getting the function address
 	{
@@ -381,14 +325,14 @@ int CForwardManager::TempleHookIClient::GetGameClientVFuncOffset(IClient *pClien
 			funcPtr = reinterpret_cast<void*>(jmpPtr + *reinterpret_cast<int8_t*>(jmpPtr + 0x1) + 0x2);
 		}
 	}
-	
+
 	// Finding a function in the CGameClient virtual table
 	for(int i = 0; i < 90; i++)
 	{
-		void* vfnGamePtr = *reinterpret_cast<void***>(pGameClient) + i;
+		void** vfnGamePtr = *reinterpret_cast<void***>(pGameClient) + i;
 		void* vfnGameOrigPtr = SH_GLOB_SHPTR->GetOrigVfnPtrEntry(vfnGamePtr);
 
-		if((vfnGameOrigPtr ? vfnGameOrigPtr : *reinterpret_cast<void**>(vfnGamePtr)) == funcPtr)
+		if((vfnGameOrigPtr ? vfnGameOrigPtr : *vfnGamePtr) == funcPtr)
 		{
 			return i;
 		}
@@ -397,482 +341,8 @@ int CForwardManager::TempleHookIClient::GetGameClientVFuncOffset(IClient *pClien
 	return -1;
 }
 #endif
-
-DETOUR_DECL_MEMBER4(CCSPlayer_FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bMustBeTeamSpecific, CUtlVector<CEconItemView*>&, matchingWeapons)
+inline IClient* CForwardManager::CBaseClientHook::ForceCastToIClient(IClient* pClient)
 {
-	if (g_ForwardManager.GiveNamedItemPre.bIgnoredCEconItemView)
-	{
-		g_ForwardManager.GiveNamedItemPre.bIgnoredCEconItemView = false;
-
-		return 0LL;
-	}
-
-	return DETOUR_MEMBER_CALL(CCSPlayer_FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bMustBeTeamSpecific, matchingWeapons);
-}
-
-CBaseEntity* CForwardManager::GiveNamedItemPre::SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin)
-{
-	cell_t res = Pl_Continue;
-	cell_t pViewNew = reinterpret_cast<cell_t>(pView);
-	cell_t IgnoredCEconItemViewNew = false;
-	cell_t OriginIsnullptr = pOrigin == nullptr;
-	cell_t Origin[3] = { 0, 0, 0 };
-	char szItemByf[64];
-
-	V_strncpy(szItemByf, szItem, sizeof(szItemByf));
-
-	if (pOrigin)
-	{
-		Origin[0] = sp_ftoc(pOrigin->x);
-		Origin[1] = sp_ftoc(pOrigin->y);
-		Origin[2] = sp_ftoc(pOrigin->z);
-	}
-
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
-	pForward->PushStringEx(szItemByf, sizeof(szItemByf), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-	pForward->PushCellByRef(&pViewNew);
-	pForward->PushCellByRef(&IgnoredCEconItemViewNew);
-	pForward->PushCellByRef(&OriginIsnullptr);
-	pForward->PushArray(Origin, 3, SM_PARAM_COPYBACK);
-	pForward->Execute(&res);
-
-	if (res != Pl_Continue)
-	{
-		if (res == Pl_Changed)
-		{
-			if (IgnoredCEconItemViewNew)
-			{
-				bIgnoredCEconItemView = true;
-				pViewNew = 0;
-			}
-
-			Vector OriginNew; OriginNew.Invalidate();
-
-			if (OriginIsnullptr == false)
-			{
-				OriginNew.x = sp_ctof(Origin[0]);
-				OriginNew.y = sp_ctof(Origin[1]);
-				OriginNew.z = sp_ctof(Origin[2]);
-			}
-
-			RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, GiveNamedItem, (const_cast<const char*>(szItemByf), iSubType, reinterpret_cast<CEconItemView*>(pViewNew), removeIfNotCarried, OriginNew.IsValid() ? &OriginNew : nullptr));
-		}
-		else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
-	}
-
-	RETURN_META_VALUE(MRES_IGNORED, nullptr);
-}
-
-void CForwardManager::GiveNamedItemPre::Init()
-{
-	if (g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(GiveNamedItem, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 6, nullptr, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
-		pFindMatchingWeaponsForTeamLoadout = DETOUR_CREATE_MEMBER(CCSPlayer_FindMatchingWeaponsForTeamLoadout, "CCSPlayer::FindMatchingWeaponsForTeamLoadout");
-
-		if (!pFindMatchingWeaponsForTeamLoadout) smutils->LogError(myself, "Detour failed CCSPlayer::FindMatchingWeaponsForTeamLoadout, functionality GiveNamedItemPre will be limited.");
-	}
-	else smutils->LogError(myself, "Failed to get GiveNamedItem offset, Hook GiveNamedItemPre will be unavailable.");
-}
-
-void CForwardManager::GiveNamedItemPre::Shutdown()
-{
-	if (iOffset != -1)
-	{
-		if (pFindMatchingWeaponsForTeamLoadout) pFindMatchingWeaponsForTeamLoadout->Destroy();
-
-		forwards->ReleaseForward(pForward);
-	}
-}
-
-void CForwardManager::GiveNamedItemPre::UpdateHook()
-{
-	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
-	{
-		bHooked = !bHooked;
-
-		int iMaxClients = playerhelpers->GetMaxClients();
-
-		if (bHooked)
-		{
-			if (pFindMatchingWeaponsForTeamLoadout) pFindMatchingWeaponsForTeamLoadout->EnableDetour();
-
-			IGamePlayer* pPlayer;
-
-			for (int i = 1; i <= iMaxClients; i++) if ((pPlayer = playerhelpers->GetGamePlayer(i)) && pPlayer->IsInGame())
-			{
-				HookClient(i);
-			}
-		}
-		else
-		{
-			if (pFindMatchingWeaponsForTeamLoadout) pFindMatchingWeaponsForTeamLoadout->DisableDetour();
-
-			for (int i = 1; i <= iMaxClients; i++) UnHookClient(i);
-		}
-	}
-}
-
-int CForwardManager::GiveNamedItemPre::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(GiveNamedItem, pEnt, SH_MEMBER(this, &CForwardManager::GiveNamedItemPre::SHHook), false);
-}
-
-void CForwardManager::GiveNamedItemPost::Init()
-{
-	if (g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(GiveNamedItem, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 6, nullptr, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Array);
-	}
-	else smutils->LogError(myself, "Failed to get GiveNamedItem offset, Hook GiveNamedItemPost will be unavailable.");
-}
-
-int CForwardManager::GiveNamedItemPost::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(GiveNamedItem, pEnt, SH_MEMBER(this, &CForwardManager::GiveNamedItemPost::SHHook), true);
-}
-
-CBaseEntity* CForwardManager::GiveNamedItemPost::SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin)
-{
-	CBaseEntity* pEnt = META_IFACEPTR(CBaseEntity);
-
-	cell_t Origin[3] = { 0, 0, 0 };
-
-	if (pOrigin)
-	{
-		Origin[0] = sp_ftoc(pOrigin->x);
-		Origin[1] = sp_ftoc(pOrigin->y);
-		Origin[2] = sp_ftoc(pOrigin->z);
-	}
-
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(pEnt));
-	pForward->PushString(szItem);
-	pForward->PushCell(reinterpret_cast<cell_t>(pView));
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(META_RESULT_ORIG_RET(CBaseEntity*)));
-	pForward->PushCell(pOrigin == nullptr);
-	pForward->PushArray(Origin, 3);
-	pForward->Execute(nullptr);
-
-	RETURN_META_VALUE(MRES_IGNORED, nullptr);
-}
-
-void CForwardManager::WeaponCanUsePre::Init()
-{
-	if (g_pGameConf[GameConf_SDKH]->GetOffset("Weapon_CanUse", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(Weapon_CanUse, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_Cell, Param_CellByRef);
-	}
-	else smutils->LogError(myself, "Failed to get Weapon_CanUse offset, Hook WeaponCanUsePre will be unavailable.");
-}
-
-int CForwardManager::WeaponCanUsePre::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(Weapon_CanUse, pEnt, SH_MEMBER(this, &CForwardManager::WeaponCanUsePre::SHHook), false);
-}
-
-bool CForwardManager::WeaponCanUsePre::SHHook(CBaseCombatWeapon* pWeapon)
-{
-	cell_t res = Pl_Continue;
-	cell_t ret = META_RESULT_ORIG_RET(bool);
-
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(pWeapon));
-	pForward->PushCellByRef(&ret);
-	pForward->Execute(&res);
-
-	if (res != Pl_Continue)
-	{
-		if (res == Pl_Changed) RETURN_META_VALUE(MRES_SUPERCEDE, static_cast<bool>(ret));
-		else RETURN_META_VALUE(MRES_SUPERCEDE, false);
-	}
-
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void CForwardManager::WeaponCanUsePost::Init()
-{
-	if (g_pGameConf[GameConf_SDKH]->GetOffset("Weapon_CanUse", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(Weapon_CanUse, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
-	}
-	else smutils->LogError(myself, "Failed to get Weapon_CanUse offset, Hook WeaponCanUsePost will be unavailable.");
-}
-
-int CForwardManager::WeaponCanUsePost::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(Weapon_CanUse, pEnt, SH_MEMBER(this, &CForwardManager::WeaponCanUsePost::SHHook), true);
-}
-
-bool CForwardManager::WeaponCanUsePost::SHHook(CBaseCombatWeapon* pWeapon)
-{
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(pWeapon));
-	pForward->PushCell(META_RESULT_ORIG_RET(bool));
-	pForward->Execute(nullptr);
-
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void CForwardManager::SetPlayerModelPre::Init()
-{
-	if (g_pGameConf[GameConf_SDKT]->GetOffset("SetEntityModel", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(SetEntityModel, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_String, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get SetEntityModel offset, Hook SetPlayerModelPre will be unavailable.");
-}
-
-int CForwardManager::SetPlayerModelPre::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(SetEntityModel, pEnt, SH_MEMBER(this, &CForwardManager::SetPlayerModelPre::SHHook), false);
-}
-
-CBaseEntity* CForwardManager::SetPlayerModelPre::SHHook(const char* sModel)
-{
-	cell_t res = Pl_Continue;
-	CBaseEntity* pEnt = META_IFACEPTR(CBaseEntity);
-	char sModelNew[256];
-
-	V_strncpy(sModelNew, sModel, sizeof(sModelNew));
-
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(pEnt));
-	pForward->PushString(playerhelpers->GetGamePlayer(gamehelpers->EntityToBCompatRef(pEnt))->GetPlayerInfo()->GetModelName());
-	pForward->PushStringEx(sModelNew, sizeof(sModelNew), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-	pForward->Execute(&res);
-
-	if (res != Pl_Continue)
-	{
-		if (res == Pl_Changed) RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, SetEntityModel, (const_cast<const char*>(sModelNew)));
-		else RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
-	}
-
-	RETURN_META_VALUE(MRES_IGNORED, nullptr);
-}
-
-void CForwardManager::SetPlayerModelPost::Init()
-{
-	if (g_pGameConf[GameConf_SDKT]->GetOffset("SetEntityModel", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(SetEntityModel, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get SetEntityModel offset, Hook SetPlayerModelPost will be unavailable.");
-}
-
-int CForwardManager::SetPlayerModelPost::__SH_ADD_MANUALHOOK(CBaseEntity* pEnt)
-{
-	return SH_ADD_MANUALHOOK(SetEntityModel, pEnt, SH_MEMBER(this, &CForwardManager::SetPlayerModelPost::SHHook), true);
-}
-
-CBaseEntity* CForwardManager::SetPlayerModelPost::SHHook(const char* sModel)
-{
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
-	pForward->PushString(sModel);
-	pForward->Execute(nullptr);
-
-	RETURN_META_VALUE(MRES_IGNORED, nullptr);
-}
-
-void CForwardManager::ClientVoiceToPre::Init()
-{
-	if (g_pCPlayerVoiceListener) pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_Cell, Param_CellByRef);
-	else smutils->LogError(myself, "g_pCPlayerVoiceListener == nullptr, Hook ClientVoiceToPre will be unavailable.");
-}
-
-void CForwardManager::ClientVoiceToPre::Shutdown()
-{
-	if (g_pCPlayerVoiceListener)
-	{
-		if (bHooked)
-		{
-			SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHook), false);
-			SH_REMOVE_HOOK(IServerGameClients, ClientVoice, serverClients, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHookClientVoice), false);
-		}
-
-		forwards->ReleaseForward(pForward);
-	}
-}
-
-bool CForwardManager::ClientVoiceToPre::UpdateForward(IPluginFunction* pFunc, bool bHook)
-{
-	if (g_pCPlayerVoiceListener)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
-}
-
-void CForwardManager::ClientVoiceToPre::UpdateHook()
-{
-	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
-	{
-		bHooked = !bHooked;
-
-		if (bHooked)
-		{
-			SH_ADD_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHook), false);
-			SH_ADD_HOOK(IServerGameClients, ClientVoice, serverClients, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHookClientVoice), false);
-		}
-		else
-		{
-			SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHook), false);
-			SH_REMOVE_HOOK(IServerGameClients, ClientVoice, serverClients, SH_MEMBER(this, &CForwardManager::ClientVoiceToPre::SHHookClientVoice), false);
-		}
-	}
-}
-
-bool CForwardManager::ClientVoiceToPre::SHHook(int iReceiver, int iSender, bool bListen)
-{
-	//IsPlayerSpeaking is required to protect plugins from useless spam, but this has its disadvantage because it needs another hook.
-	if (iReceiver != iSender && (bStartVoice[iSender] || g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender)))
-	{
-		cell_t res = Pl_Continue;
-		cell_t ret = bListen;
-
-		pForward->PushCell(iSender);
-		pForward->PushCell(iReceiver);
-		pForward->PushCellByRef(&ret);
-		pForward->Execute(&res);
-
-		if (res != Pl_Continue)
-		{
-			if (res == Pl_Changed) RETURN_META_VALUE_NEWPARAMS(MRES_HANDLED, true, &IVoiceServer::SetClientListening, (iReceiver, iSender, ret));
-			else RETURN_META_VALUE_NEWPARAMS(MRES_HANDLED, true, &IVoiceServer::SetClientListening, (iReceiver, iSender, false));
-		}
-	}
-
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void CForwardManager::ClientVoiceToPre::SHHookClientVoice(edict_t* pEdict)
-{
-	int iSender = gamehelpers->IndexOfEdict(pEdict);
-
-	if (!g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender))
-	{
-		bStartVoice[iSender] = true;
-
-		IGamePlayer* pPlayer;
-		int iMaxClients = playerhelpers->GetMaxClients();
-
-		for (int iReceiver = 1; iReceiver <= iMaxClients; iReceiver++) if ((pPlayer = playerhelpers->GetGamePlayer(iReceiver)) && pPlayer->IsInGame())
-		{
-			voiceserver->SetClientListening(iReceiver, iSender, voiceserver->GetClientListening(iReceiver, iSender));
-		}
-
-		bStartVoice[iSender] = false;
-	}
-
-	RETURN_META(MRES_IGNORED);
-}
-
-void CForwardManager::ClientVoiceToPost::Init()
-{
-	if (g_pCPlayerVoiceListener) pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
-	else smutils->LogError(myself, "g_pCPlayerVoiceListener == nullptr, Hook ClientVoiceToPost will be unavailable.");
-}
-
-void CForwardManager::ClientVoiceToPost::Shutdown()
-{
-	if (g_pCPlayerVoiceListener)
-	{
-		if (bHooked) SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPost::SHHook), true);
-
-		forwards->ReleaseForward(pForward);
-	}
-}
-
-bool CForwardManager::ClientVoiceToPost::UpdateForward(IPluginFunction* pFunc, bool bHook)
-{
-	if (g_pCPlayerVoiceListener)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
-}
-
-void CForwardManager::ClientVoiceToPost::UpdateHook()
-{
-	if (g_pCPlayerVoiceListener && (pForward->GetFunctionCount() > 0) != bHooked)
-	{
-		bHooked = !bHooked;
-
-		if (bHooked) SH_ADD_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPost::SHHook), true);
-		else SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPost::SHHook), true);
-	}
-}
-
-bool CForwardManager::ClientVoiceToPost::SHHook(int iReceiver, int iSender, bool bListen)
-{
-	if (iReceiver != iSender && g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender))
-	{
-		pForward->PushCell(iSender);
-		pForward->PushCell(iReceiver);
-		pForward->PushCell(bListen);
-		pForward->Execute(nullptr);
-	}
-
-	RETURN_META_VALUE(MRES_IGNORED, true);
-}
-
-void CForwardManager::ConsolePrintPre::Init()
-{
-	iOffset = 0xDEADC0DE;
-	pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
-}
-
-int CForwardManager::ConsolePrintPre::__SH_ADD_VPHOOK(IClient* pClient)
-{
-#ifdef PLATFORM_LINUX
-	SourceHook::MemFuncInfo mfi;
-	SourceHook::GetFuncInfo(&IClient::ClientPrintf, mfi);
-	
-	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
-	if (offset != -1)
-	{
-		SH_MANUALHOOK_RECONFIGURE(CBaseClient_ClientPrintf, offset, 0, 0);
-	
-		iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
-	}
-	else
-	{
-		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPre will be limited.");
-	}
-#endif
-
-    return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPre::SHHook), false);
-}
-
-void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
-{
-	IClient* pClient = META_IFACEPTR(IClient);
 #ifdef PLATFORM_LINUX
 	// Checking offset to this (CGameClient 0) (IClient -4)
 	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
@@ -881,18 +351,545 @@ void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 	}
 #endif
 
+	return pClient;
+}
+
+bool CForwardManager::GiveNamedItemHook::Configure()
+{
+	int offset = -1;
+	if(!g_pGameConf[GameConf_SDKT]->GetOffset("GiveNamedItem", &offset))
+	{
+		smutils->LogError(myself, "Failed to get GiveNamedItem offset, hook %s will be unavailable.", GetHookName());
+
+		return false;
+	}
+
+	SH_MANUALHOOK_RECONFIGURE(GiveNamedItem, offset, 0, 0);
+
+	return true;
+}
+
+DETOUR_DECL_MEMBER4(CCSPlayer_FindMatchingWeaponsForTeamLoadout, uint64_t, const char*, szItem, int, iTeam, bool, bMustBeTeamSpecific, CUtlVector<CEconItemView*>&, matchingWeapons)
+{
+	// Function can be called twice if the game mode is GunGame
+	if(g_ForwardManager.m_GiveNamedItemPreHook.m_iFrameCount == gpGlobals->framecount)
+	{
+		return 0LL;
+	}
+
+	return DETOUR_MEMBER_CALL(CCSPlayer_FindMatchingWeaponsForTeamLoadout)(szItem, iTeam, bMustBeTeamSpecific, matchingWeapons);
+}
+
+CForwardManager::GiveNamedItemPreHook::GiveNamedItemPreHook()
+{
+	m_Hooks[PTaH_GiveNamedItemPre] = this;
+
+	m_pFindMatchingWeaponsForTeamLoadoutHook = nullptr;
+	m_iFrameCount = 0;
+}
+
+void CForwardManager::GiveNamedItemPreHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 6, nullptr, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
+
+		m_pFindMatchingWeaponsForTeamLoadoutHook = DETOUR_CREATE_MEMBER(CCSPlayer_FindMatchingWeaponsForTeamLoadout, "CCSPlayer::FindMatchingWeaponsForTeamLoadout");
+		if(!m_pFindMatchingWeaponsForTeamLoadoutHook)
+		{
+			smutils->LogError(myself, "Detour failed CCSPlayer::FindMatchingWeaponsForTeamLoadout, %s hook functionality will be limited.", GetHookName());
+		}
+	}
+}
+
+void CForwardManager::GiveNamedItemPreHook::Shutdown()
+{
+	BaseClass::Shutdown();
+
+	if(m_pFindMatchingWeaponsForTeamLoadoutHook)
+	{
+		m_pFindMatchingWeaponsForTeamLoadoutHook->Destroy();
+	}
+}
+
+int CForwardManager::GiveNamedItemPreHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(GiveNamedItem, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::GiveNamedItemPreHook::Handler), false);
+}
+
+void CForwardManager::GiveNamedItemPreHook::OnInternalHookActivated()
+{
+	BaseClass::OnInternalHookActivated();
+
+	if(m_pFindMatchingWeaponsForTeamLoadoutHook)
+	{
+		m_pFindMatchingWeaponsForTeamLoadoutHook->EnableDetour();
+	}
+}
+
+void CForwardManager::GiveNamedItemPreHook::OnInternalHookDeactivated()
+{
+	BaseClass::OnInternalHookDeactivated();
+
+	if(m_pFindMatchingWeaponsForTeamLoadoutHook)
+	{
+		m_pFindMatchingWeaponsForTeamLoadoutHook->DisableDetour();
+	}
+}
+
+CBaseEntity* CForwardManager::GiveNamedItemPreHook::Handler(const char* pchName, int iSubType, CEconItemView* pScriptItem, bool bForce, Vector* pOrigin)
+{
+	m_iFrameCount = 0;
+
+	if(!pchName)
+	{
+		RETURN_META_VALUE(MRES_IGNORED, nullptr);
+	}
+
+	cell_t res = Pl_Continue;
+	cell_t pScriptItemNew = reinterpret_cast<cell_t>(pScriptItem);
+	cell_t IgnoredCEconItemViewNew = false;
+	cell_t OriginIsNull = pOrigin == nullptr;
+	cell_t Origin[3] = { 0, 0, 0 };
+	char szNewName[64];
+
+	V_strncpy(szNewName, pchName, sizeof(szNewName));
+
+	if(pOrigin)
+	{
+		Origin[0] = sp_ftoc(pOrigin->x);
+		Origin[1] = sp_ftoc(pOrigin->y);
+		Origin[2] = sp_ftoc(pOrigin->z);
+	}
+
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
+	m_pForward->PushStringEx(szNewName, sizeof(szNewName), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	m_pForward->PushCellByRef(&pScriptItemNew);
+	m_pForward->PushCellByRef(&IgnoredCEconItemViewNew);
+	m_pForward->PushCellByRef(&OriginIsNull);
+	m_pForward->PushArray(Origin, 3, SM_PARAM_COPYBACK);
+	m_pForward->Execute(&res);
+
+	if(res != Pl_Continue)
+	{
+		if(res == Pl_Changed)
+		{
+			if(IgnoredCEconItemViewNew)
+			{
+				m_iFrameCount = gpGlobals->framecount;
+				pScriptItemNew = 0;
+			}
+
+			if(OriginIsNull == false)
+			{
+				Vector vecOrigin(sp_ctof(Origin[0]), sp_ctof(Origin[1]), sp_ctof(Origin[2]));
+
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, GiveNamedItem, (szNewName, iSubType, reinterpret_cast<CEconItemView*>(pScriptItemNew), bForce, &vecOrigin));
+			}
+
+			RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, GiveNamedItem, (szNewName, iSubType, reinterpret_cast<CEconItemView*>(pScriptItemNew), bForce, nullptr));
+		}
+
+		RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
+	}
+
+	RETURN_META_VALUE(MRES_IGNORED, nullptr);
+}
+
+CForwardManager::GiveNamedItemPostHook::GiveNamedItemPostHook()
+{
+	m_Hooks[PTaH_GiveNamedItemPost] = this;
+}
+
+void CForwardManager::GiveNamedItemPostHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 6, nullptr, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Array);
+	}
+}
+
+int CForwardManager::GiveNamedItemPostHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(GiveNamedItem, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::GiveNamedItemPostHook::Handler), true);
+}
+
+CBaseEntity* CForwardManager::GiveNamedItemPostHook::Handler(const char* pchName, int iSubType, CEconItemView* pScriptItem, bool bForce, Vector* pOrigin)
+{
+	if(!pchName)
+	{
+		RETURN_META_VALUE(MRES_IGNORED, nullptr);
+	}
+
+	cell_t Origin[3] = { 0, 0, 0 };
+
+	if(pOrigin)
+	{
+		Origin[0] = sp_ftoc(pOrigin->x);
+		Origin[1] = sp_ftoc(pOrigin->y);
+		Origin[2] = sp_ftoc(pOrigin->z);
+	}
+
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
+	m_pForward->PushString(pchName);
+	m_pForward->PushCell(reinterpret_cast<cell_t>(pScriptItem));
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_RESULT_ORIG_RET(CBaseEntity*)));
+	m_pForward->PushCell(pOrigin == nullptr);
+	m_pForward->PushArray(Origin, 3);
+	m_pForward->Execute(nullptr);
+
+	RETURN_META_VALUE(MRES_IGNORED, nullptr);
+}
+
+bool CForwardManager::WeaponCanUseHook::Configure()
+{
+	int offset = -1;
+	if(!g_pGameConf[GameConf_SDKH]->GetOffset("Weapon_CanUse", &offset))
+	{
+		smutils->LogError(myself, "Failed to get Weapon_CanUse offset, hook %s will be unavailable.", GetHookName());
+
+		return false;
+	}
+
+	SH_MANUALHOOK_RECONFIGURE(Weapon_CanUse, offset, 0, 0);
+
+	return true;
+}
+
+CForwardManager::WeaponCanUsePreHook::WeaponCanUsePreHook()
+{
+	m_Hooks[PTaH_WeaponCanUsePre] = this;
+}
+
+void CForwardManager::WeaponCanUsePreHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_Cell, Param_CellByRef);
+	}
+}
+
+int CForwardManager::WeaponCanUsePreHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(Weapon_CanUse, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::WeaponCanUsePreHook::Handler), false);
+}
+
+bool CForwardManager::WeaponCanUsePreHook::Handler(CBaseCombatWeapon* pWeapon)
+{
+	cell_t res = Pl_Continue;
+	cell_t ret = META_RESULT_ORIG_RET(bool);
+
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(pWeapon));
+	m_pForward->PushCellByRef(&ret);
+	m_pForward->Execute(&res);
+
+	if(res != Pl_Continue)
+	{
+		if(res == Pl_Changed)
+		{
+			RETURN_META_VALUE(MRES_SUPERCEDE, static_cast<bool>(ret));
+		}
+
+		RETURN_META_VALUE(MRES_SUPERCEDE, false);
+	}
+
+	RETURN_META_VALUE(MRES_IGNORED, true);
+}
+
+CForwardManager::WeaponCanUsePostHook::WeaponCanUsePostHook()
+{
+	m_Hooks[PTaH_WeaponCanUsePost] = this;
+}
+
+void CForwardManager::WeaponCanUsePostHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
+	}
+}
+
+int CForwardManager::WeaponCanUsePostHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(Weapon_CanUse, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::WeaponCanUsePostHook::Handler), true);
+}
+
+bool CForwardManager::WeaponCanUsePostHook::Handler(CBaseCombatWeapon* pWeapon)
+{
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(pWeapon));
+	m_pForward->PushCell(META_RESULT_ORIG_RET(bool));
+	m_pForward->Execute(nullptr);
+
+	RETURN_META_VALUE(MRES_IGNORED, true);
+}
+
+bool CForwardManager::SetPlayerModelHook::Configure()
+{
+	int offset = -1;
+	if(!g_pGameConf[GameConf_SDKT]->GetOffset("SetEntityModel", &offset))
+	{
+		smutils->LogError(myself, "Failed to get SetEntityModel offset, hook %s will be unavailable.", GetHookName());
+
+		return false;
+	}
+
+	SH_MANUALHOOK_RECONFIGURE(SetEntityModel, offset, 0, 0);
+
+	return true;
+}
+
+CForwardManager::SetPlayerModelPreHook::SetPlayerModelPreHook()
+{
+	m_Hooks[PTaH_SetPlayerModelPre] = this;
+}
+
+void CForwardManager::SetPlayerModelPreHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_String, Param_String);
+	}
+}
+
+int CForwardManager::SetPlayerModelPreHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(SetEntityModel, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::SetPlayerModelPreHook::Handler), false);
+}
+
+void CForwardManager::SetPlayerModelPreHook::Handler(const char* pszModelName)
+{
+	cell_t res = Pl_Continue;
+	int iClient = gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity));
+	char szModelNewName[256];
+
+	V_strncpy(szModelNewName, pszModelName, sizeof(szModelNewName));
+
+	m_pForward->PushCell(iClient);
+	m_pForward->PushString(playerhelpers->GetGamePlayer(iClient)->GetPlayerInfo()->GetModelName());
+	m_pForward->PushStringEx(szModelNewName, sizeof(szModelNewName), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	m_pForward->Execute(&res);
+
+	if(res != Pl_Continue)
+	{
+		if(res == Pl_Changed)
+		{
+			RETURN_META_MNEWPARAMS(MRES_HANDLED, SetEntityModel, (szModelNewName));
+		}
+
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	RETURN_META(MRES_IGNORED);
+}
+
+CForwardManager::SetPlayerModelPostHook::SetPlayerModelPostHook()
+{
+	m_Hooks[PTaH_SetPlayerModelPost] = this;
+}
+
+void CForwardManager::SetPlayerModelPostHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
+	}
+}
+
+int CForwardManager::SetPlayerModelPostHook::ManualHook(int iClient)
+{
+	return SH_ADD_MANUALHOOK(SetEntityModel, gamehelpers->ReferenceToEntity(iClient), SH_MEMBER(this, &CForwardManager::SetPlayerModelPostHook::Handler), true);
+}
+
+void CForwardManager::SetPlayerModelPostHook::Handler(const char* pszModelName)
+{
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(META_IFACEPTR(CBaseEntity)));
+	m_pForward->PushString(pszModelName);
+	m_pForward->Execute(nullptr);
+
+	RETURN_META(MRES_IGNORED);
+}
+
+CForwardManager::ClientVoiceToPreHook::ClientVoiceToPreHook()
+{
+	m_Hooks[PTaH_ClientVoiceToPre] = this;
+
+	memset(m_bStartVoice, 0x0, sizeof(m_bStartVoice));
+}
+
+void CForwardManager::ClientVoiceToPreHook::Init()
+{
+	if(!g_pCPlayerVoiceListener)
+	{
+		smutils->LogError(myself, "g_pCPlayerVoiceListener is nullptr, hook ClientVoiceToPre will be unavailable.");
+
+		return;
+	}
+
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 3, nullptr, Param_Cell, Param_Cell, Param_CellByRef);
+}
+
+void CForwardManager::ClientVoiceToPreHook::OnInternalHookActivated()
+{
+	CBaseHook::OnInternalHookActivated();
+
+	SH_ADD_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPreHook::Handler), false);
+	SH_ADD_HOOK(IServerGameClients, ClientVoice, serverClients, SH_MEMBER(this, &CForwardManager::ClientVoiceToPreHook::ClientVoiceHandler), false);
+}
+
+void CForwardManager::ClientVoiceToPreHook::OnInternalHookDeactivated()
+{
+	CBaseHook::OnInternalHookDeactivated();
+
+	SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPreHook::Handler), false);
+	SH_REMOVE_HOOK(IServerGameClients, ClientVoice, serverClients, SH_MEMBER(this, &CForwardManager::ClientVoiceToPreHook::ClientVoiceHandler), false);
+
+	memset(m_bStartVoice, 0x0, sizeof(m_bStartVoice));
+}
+
+bool CForwardManager::ClientVoiceToPreHook::Handler(int iReceiver, int iSender, bool bListen)
+{
+	// IsPlayerSpeaking is required to protect plugins from useless spam, but this has its disadvantage because it needs another hook.
+	if(iReceiver != iSender && (m_bStartVoice[iSender] || g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender)))
+	{
+		cell_t res = Pl_Continue;
+		cell_t ret = bListen;
+
+		m_pForward->PushCell(iSender);
+		m_pForward->PushCell(iReceiver);
+		m_pForward->PushCellByRef(&ret);
+		m_pForward->Execute(&res);
+
+		if(res != Pl_Continue)
+		{
+			if(res == Pl_Changed)
+			{
+				RETURN_META_VALUE_NEWPARAMS(MRES_HANDLED, true, &IVoiceServer::SetClientListening, (iReceiver, iSender, ret));
+			}
+
+			RETURN_META_VALUE_NEWPARAMS(MRES_HANDLED, true, &IVoiceServer::SetClientListening, (iReceiver, iSender, false));
+		}
+	}
+
+	RETURN_META_VALUE(MRES_IGNORED, true);
+}
+
+void CForwardManager::ClientVoiceToPreHook::ClientVoiceHandler(edict_t* pEdict)
+{
+	int iSender = gamehelpers->IndexOfEdict(pEdict);
+
+	if(!g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender))
+	{
+		m_bStartVoice[iSender] = true;
+
+		IGamePlayer* pPlayer;
+		int iMaxClients = playerhelpers->GetMaxClients();
+		for (int iReceiver = 1; iReceiver <= iMaxClients; iReceiver++) if ((pPlayer = playerhelpers->GetGamePlayer(iReceiver)) && pPlayer->IsInGame())
+		{
+			voiceserver->SetClientListening(iReceiver, iSender, voiceserver->GetClientListening(iReceiver, iSender));
+		}
+
+		m_bStartVoice[iSender] = false;
+	}
+
+	RETURN_META(MRES_IGNORED);
+}
+
+CForwardManager::ClientVoiceToPostHook::ClientVoiceToPostHook()
+{
+	m_Hooks[PTaH_ClientVoiceToPost] = this;
+}
+
+void CForwardManager::ClientVoiceToPostHook::Init()
+{
+	if(!g_pCPlayerVoiceListener)
+	{
+		smutils->LogError(myself, "g_pCPlayerVoiceListener is nullptr, hook ClientVoiceToPost will be unavailable.");
+
+		return;
+	}
+
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 3, nullptr, Param_Cell, Param_Cell, Param_Cell);
+}
+
+void CForwardManager::ClientVoiceToPostHook::OnInternalHookActivated()
+{
+	CBaseHook::OnInternalHookActivated();
+
+	SH_ADD_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPostHook::Handler), true);
+}
+
+void CForwardManager::ClientVoiceToPostHook::OnInternalHookDeactivated()
+{
+	CBaseHook::OnInternalHookDeactivated();
+
+	SH_REMOVE_HOOK(IVoiceServer, SetClientListening, voiceserver, SH_MEMBER(this, &CForwardManager::ClientVoiceToPostHook::Handler), true);
+}
+
+bool CForwardManager::ClientVoiceToPostHook::Handler(int iReceiver, int iSender, bool bListen)
+{
+	if(iReceiver != iSender && g_pCPlayerVoiceListener->IsPlayerSpeaking(iSender))
+	{
+		m_pForward->PushCell(iSender);
+		m_pForward->PushCell(iReceiver);
+		m_pForward->PushCell(bListen);
+		m_pForward->Execute(nullptr);
+	}
+
+	RETURN_META_VALUE(MRES_IGNORED, true);
+}
+
+CForwardManager::ConsolePrintPreHook::ConsolePrintPreHook()
+{
+	m_Hooks[PTaH_ConsolePrintPre] = this;
+}
+
+void CForwardManager::ConsolePrintPreHook::Init()
+{
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
+}
+
+int CForwardManager::ConsolePrintPreHook::VPHook(int iClient)
+{
+	IClient* pClient = iserver->GetClient(iClient - 1);
+
+#ifdef PLATFORM_LINUX
+	SourceHook::MemFuncInfo mfi;
+	SourceHook::GetFuncInfo(&IClient::ClientPrintf, mfi);
+
+	int offset = GetParentVFuncOffset(pClient, mfi.vtblindex);
+	if(offset != -1)
+	{
+		SH_MANUALHOOK_RECONFIGURE(CBaseClient_ClientPrintf, offset, 0, 0);
+
+		m_iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPreHook::Handler), false);
+	}
+	else
+	{
+		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, ConsolePrintPre hook functionality will be limited.");
+	}
+#endif
+
+    return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPreHook::Handler), false);
+}
+
+void CForwardManager::ConsolePrintPreHook::Handler(const char* szFormat)
+{
+	IClient* pClient = ForceCastToIClient(META_IFACEPTR(IClient));
+
 	cell_t res = Pl_Continue;
 	char szMsg[1024];
-	
+
 	V_strncpy(szMsg, szFormat, sizeof(szMsg));
-	
-	pForward->PushCell(pClient->GetPlayerSlot() + 1);
-	pForward->PushStringEx(szMsg, sizeof(szMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-	pForward->Execute(&res);
-	
-	if (res != Pl_Continue)
+
+	m_pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	m_pForward->PushStringEx(szMsg, sizeof(szMsg), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	m_pForward->Execute(&res);
+
+	if(res != Pl_Continue)
 	{
-		if (res == Pl_Changed)
+		if(res == Pl_Changed)
 		{
 #ifdef PLATFORM_LINUX
 			// If it's a CGameClient, the pointers will differ
@@ -911,99 +908,97 @@ void CForwardManager::ConsolePrintPre::SHHook(const char* szFormat)
 	RETURN_META(MRES_IGNORED);
 }
 
-void CForwardManager::ConsolePrintPost::Init()
+CForwardManager::ConsolePrintPostHook::ConsolePrintPostHook()
 {
-	iOffset = 0xDEADC0DE;
-	pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
+	m_Hooks[PTaH_ConsolePrintPost] = this;
 }
 
-int CForwardManager::ConsolePrintPost::__SH_ADD_VPHOOK(IClient* pClient)
+void CForwardManager::ConsolePrintPostHook::Init()
 {
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
+}
+
+int CForwardManager::ConsolePrintPostHook::VPHook(int iClient)
+{
+	IClient* pClient = iserver->GetClient(iClient - 1);
+
 #ifdef PLATFORM_LINUX
 	SourceHook::MemFuncInfo mfi;
 	SourceHook::GetFuncInfo(&IClient::ClientPrintf, mfi);
-	
-	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+
+	int offset = GetParentVFuncOffset(pClient, mfi.vtblindex);
 	if (offset != -1)
 	{
 		SH_MANUALHOOK_RECONFIGURE(CBaseClient_ClientPrintf, offset, 0, 0);
-	
-		iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
+
+		m_iGameHookId = SH_ADD_MANUALVPHOOK(CBaseClient_ClientPrintf, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ConsolePrintPostHook::Handler), true);
 	}
 	else
 	{
-		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, Hook ConsolePrintPost will be limited.");
+		smutils->LogError(myself, "Failed to get CBaseClient::ClientPrintf offset, ConsolePrintPost hook functionality will be limited.");
 	}
 #endif
 
-	return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPost::SHHook), true);
+	return SH_ADD_VPHOOK(IClient, ClientPrintf, pClient, SH_MEMBER(this, &CForwardManager::ConsolePrintPostHook::Handler), true);
 }
 
-void CForwardManager::ConsolePrintPost::SHHook(const char* szFormat)
+void CForwardManager::ConsolePrintPostHook::Handler(const char* szFormat)
 {
-	IClient* pClient = META_IFACEPTR(IClient);
-#ifdef PLATFORM_LINUX
-	// Checking offset to this (CGameClient 0) (IClient -4)
-	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
-	{
-		pClient = reinterpret_cast<CGameClient*>(pClient);
-	}
-#endif
+	IClient* pClient = ForceCastToIClient(META_IFACEPTR(IClient));
 
-	pForward->PushCell(pClient->GetPlayerSlot() + 1);
-	pForward->PushString(szFormat);
-	pForward->Execute(nullptr);
+	m_pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	m_pForward->PushString(szFormat);
+	m_pForward->Execute(nullptr);
 
 	RETURN_META(MRES_IGNORED);
 }
 
-void CForwardManager::ExecuteStringCommandPre::Init()
+CForwardManager::ExecuteStringCommandPreHook::ExecuteStringCommandPreHook()
 {
-	iOffset = 0xDEADC0DE;
-	pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
+	m_Hooks[PTaH_ExecuteStringCommandPre] = this;
 }
 
-int CForwardManager::ExecuteStringCommandPre::__SH_ADD_VPHOOK(IClient* pClient)
+void CForwardManager::ExecuteStringCommandPreHook::Init()
 {
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_String);
+}
+
+int CForwardManager::ExecuteStringCommandPreHook::VPHook(int iClient)
+{
+	IClient* pClient = iserver->GetClient(iClient - 1);
+
 #ifdef PLATFORM_LINUX
 	SourceHook::MemFuncInfo mfi;
 	SourceHook::GetFuncInfo(&IClient::ExecuteStringCommand, mfi);
-	
-	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+
+	int offset = GetParentVFuncOffset(pClient, mfi.vtblindex);
 	if (offset != -1)
 	{
 		SH_MANUALHOOK_RECONFIGURE(CGameClient_ExecuteStringCommand, offset, 0, 0);
-	
-		iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
+
+		m_iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPreHook::Handler), false);
 	}
 	else
 	{
-		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPre will be limited.");
+		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, ExecuteStringCommandPre hook functionality will be limited.");
 	}
 #endif
 
-	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPre::SHHook), false);
+	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPreHook::Handler), false);
 }
 
-bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString)
+bool CForwardManager::ExecuteStringCommandPreHook::Handler(const char *pCommandString)
 {
-	IClient* pClient = META_IFACEPTR(IClient);
-#ifdef PLATFORM_LINUX
-	// Checking offset to this (CGameClient 0) (IClient -4)
-	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
-	{
-		pClient = reinterpret_cast<CGameClient*>(pClient);
-	}
-#endif
+	IClient* pClient = ForceCastToIClient(META_IFACEPTR(IClient));
 
 	cell_t res = Pl_Continue;
 	char szCommandString[512];
 
 	V_strncpy(szCommandString, pCommandString, sizeof(szCommandString));
 
-	pForward->PushCell(pClient->GetPlayerSlot() + 1);
-	pForward->PushStringEx(szCommandString, sizeof(szCommandString), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-	pForward->Execute(&res);
+	m_pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	m_pForward->PushStringEx(szCommandString, sizeof(szCommandString), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	m_pForward->Execute(&res);
 
 	if (res != Pl_Continue)
 	{
@@ -1026,291 +1021,261 @@ bool CForwardManager::ExecuteStringCommandPre::SHHook(const char* pCommandString
 	RETURN_META_VALUE(MRES_IGNORED, true);
 }
 
-void CForwardManager::ExecuteStringCommandPost::Init()
+CForwardManager::ExecuteStringCommandPostHook::ExecuteStringCommandPostHook()
 {
-	iOffset = 0xDEADC0DE;
-	pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
+	m_Hooks[PTaH_ExecuteStringCommandPost] = this;
 }
 
-int CForwardManager::ExecuteStringCommandPost::__SH_ADD_VPHOOK(IClient* pClient)
+void CForwardManager::ExecuteStringCommandPostHook::Init()
 {
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_String);
+}
+
+int CForwardManager::ExecuteStringCommandPostHook::VPHook(int iClient)
+{
+	IClient* pClient = iserver->GetClient(iClient - 1);
+
 #ifdef PLATFORM_LINUX
 	SourceHook::MemFuncInfo mfi;
 	SourceHook::GetFuncInfo(&IClient::ExecuteStringCommand, mfi);
-	
-	int offset = GetGameClientVFuncOffset(pClient, mfi.vtblindex);
+
+	int offset = GetParentVFuncOffset(pClient, mfi.vtblindex);
 	if (offset != -1)
 	{
 		SH_MANUALHOOK_RECONFIGURE(CGameClient_ExecuteStringCommand, offset, 0, 0);
-	
-		iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
+
+		m_iGameHookId = SH_ADD_MANUALVPHOOK(CGameClient_ExecuteStringCommand, static_cast<CGameClient*>(pClient), SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPostHook::Handler), true);
 	}
 	else
 	{
-		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, Hook ExecuteStringCommandPost will be limited.");
+		smutils->LogError(myself, "Failed to get CGameClient::ExecuteStringCommand offset, ExecuteStringCommandPost hook functionality will be limited.");
 	}
 #endif
 
-	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPost::SHHook), true);
+	return SH_ADD_VPHOOK(IClient, ExecuteStringCommand, pClient, SH_MEMBER(this, &CForwardManager::ExecuteStringCommandPostHook::Handler), true);
 }
 
-bool CForwardManager::ExecuteStringCommandPost::SHHook(const char* pCommandString)
+bool CForwardManager::ExecuteStringCommandPostHook::Handler(const char *pCommandString)
 {
-	IClient* pClient = META_IFACEPTR(IClient);
-#ifdef PLATFORM_LINUX
-	// Checking offset to this (CGameClient 0) (IClient -4)
-	if(*reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(pClient) - 0x8) == 0)
-	{
-		pClient = reinterpret_cast<CGameClient*>(pClient);
-	}
-#endif
+	IClient* pClient = ForceCastToIClient(META_IFACEPTR(IClient));
 
-	pForward->PushCell(pClient->GetPlayerSlot() + 1);
-	pForward->PushString(pCommandString);
-	pForward->Execute(nullptr);
+	m_pForward->PushCell(pClient->GetPlayerSlot() + 1);
+	m_pForward->PushString(pCommandString);
+	m_pForward->Execute(nullptr);
 
 	RETURN_META_VALUE(MRES_IGNORED, true);
 }
 
-void CForwardManager::ClientConnectPre::Init()
+CForwardManager::ClientConnectHook::ClientConnectHook()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::RejectConnection", &iOffset))
+	m_iHookID = -1;
+}
+
+bool CForwardManager::ClientConnectHook::Configure()
+{
+	if(!iserver)
 	{
-		SH_MANUALHOOK_RECONFIGURE(RejectConnection, iOffset, 0, 0);
+		smutils->LogError(myself, "iserver is nullptr, hook %s will be unavailable.", GetHookName());
 
-		iOffset = -1;
+		return false;
+	}
 
-		if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::ConnectClient", &iOffset))
+	int offset = -1;
+	if(!g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::ConnectClient", &offset))
+	{
+		smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, hook %s will be unavailable.", GetHookName());
+
+		return false;
+	}
+
+	SH_MANUALHOOK_RECONFIGURE(ConnectClient, offset, 0, 0);
+
+	return true;
+}
+
+// Thanks Peace-Maker!
+// https://github.com/peace-maker/sourcetvmanager/blob/067b238bd21c4fba4b877cb0a514011a1141e1a6/forwards.cpp#L267
+const char* CForwardManager::ClientConnectHook::ExtractPlayerName(CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients)
+{
+	for (int i = 0; i < splitScreenClients.Count(); i++)
+	{
+		CCLCMsg_SplitPlayerConnect_t* split = splitScreenClients[i];
+		if(!split->has_convars())
 		{
-			SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
-
-			pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
-		}
-		else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPre will be unavailable.");
-	}
-	else smutils->LogError(myself, "Failed to get CBaseServer::RejectConnection offset, Hook ClientConnectPre will be unavailable.");
-}
-
-void CForwardManager::ClientConnectPre::Shutdown()
-{
-	if (iOffset != -1)
-	{
-		forwards->ReleaseForward(pForward);
-
-		if (iHookId != -1) SH_REMOVE_HOOK_ID(iHookId);
-	}
-}
-
-bool CForwardManager::ClientConnectPre::UpdateForward(IPluginFunction* pFunc, bool bHook)
-{
-	if (iOffset != -1)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
-}
-
-void CForwardManager::ClientConnectPre::UpdateHook()
-{
-	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
-	{
-		bHooked = !bHooked;
-
-		if (bHooked) iHookId = SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::ClientConnectPre::SHHook), false);
-		else if (iHookId != -1)
-		{
-			SH_REMOVE_HOOK_ID(iHookId);
-
-			iHookId = -1;
-		}
-	}
-}
-
-//https://github.com/peace-maker/sourcetvmanager/blob/067b238bd21c4fba4b877cb0a514011a1141e1a6/forwards.cpp#L267
-//Thanks Peace-Maker!
-static const char* ExtractPlayerName(CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector)
-{
-	for (int i = 0; i < pSplitPlayerConnectVector.Count(); i++)
-	{
-		NetMsg_SplitPlayerConnect* split = pSplitPlayerConnectVector[i];
-		if (!split->has_convars())
 			continue;
+		}
 
-		const CMsg_CVars cvars = split->convars();
+		const CMsg_CVars& cvars = split->convars();
 		for (int c = 0; c < cvars.cvars_size(); c++)
 		{
-			const CMsg_CVars_CVar cvar = cvars.cvars(c);
-			if (!cvar.has_name() || !cvar.has_value())
+			const CMsg_CVars_CVar& cvar = cvars.cvars(c);
+			if(!cvar.has_name() || !cvar.has_value())
+			{
 				continue;
+			}
 
-			if (!strcmp(cvar.name().c_str(), "name"))
+			if(cvar.name() == "name")
 			{
 				return cvar.value().c_str();
 			}
 		}
 	}
+
 	return "";
 }
 
-IClient* CForwardManager::ClientConnectPre::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
+void CForwardManager::ClientConnectHook::OnInternalHookActivated()
 {
-	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
+	BaseClass::OnInternalHookDeactivated();
+
+	m_iHookID = ManualHook();
+}
+
+void CForwardManager::ClientConnectHook::OnInternalHookDeactivated()
+{
+	BaseClass::OnInternalHookDeactivated();
+
+	if(m_iHookID != -1)
+	{
+		SH_REMOVE_HOOK_ID(m_iHookID);
+		m_iHookID = -1;
+	}
+}
+
+CForwardManager::ClientConnectPreHook::ClientConnectPreHook()
+{
+	m_Hooks[PTaH_ClientConnectPre] = this;
+
+	m_iRejectConnectionOffset = -1;
+}
+
+void CForwardManager::ClientConnectPreHook::Init()
+{
+	if(BaseClass::Configure())
+	{
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 5, nullptr, Param_Cell, Param_String, Param_String, Param_String, Param_String);
+
+		if (!g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::RejectConnection", &m_iRejectConnectionOffset))
+		{
+			smutils->LogError(myself, "Failed to get CBaseServer::RejectConnection offset, %s hook functionality will be limited.", GetHookName());
+		}
+	}
+}
+
+int CForwardManager::ClientConnectPreHook::ManualHook()
+{
+	return SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::ClientConnectPreHook::Handler), false);
+}
+
+IClient* CForwardManager::ClientConnectPreHook::Handler(const ns_address& adr, int protocol, int challenge, int authProtocol, const char* name, const char* password, const char* hashedCDkey, int cdKeyLen, CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform, const byte* pbEncryptionKey, int nEncryptionKeyIndex)
+{
+	if(authProtocol == 3 && cdKeyLen >= static_cast<int>(sizeof(CSteamID)))
 	{
 		cell_t res = Pl_Continue;
-		const CSteamID* SteamID = reinterpret_cast<const CSteamID*>(pCookie);
+		ns_address_render sAdr(adr);
 		char rejectReason[255];
-		char passwordBuffer[128];
-		char ipString[16];
+		char passwordNew[128];
 
-		V_strncpy(passwordBuffer, pchPassword, sizeof(passwordBuffer));
-		V_snprintf(ipString, sizeof(ipString), "%u.%u.%u.%u", address.ip[0], address.ip[1], address.ip[2], address.ip[3]);
+		V_strncpy(passwordNew, password, sizeof(passwordNew));
 
-		pForward->PushCell(SteamID->GetAccountID());
-		pForward->PushString(ipString);
-		pForward->PushString(ExtractPlayerName(pSplitPlayerConnectVector));
-		pForward->PushStringEx(passwordBuffer, sizeof(passwordBuffer), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-		pForward->PushStringEx(rejectReason, sizeof(rejectReason), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-		pForward->Execute(&res);
+		m_pForward->PushCell(reinterpret_cast<const CSteamID*>(hashedCDkey)->GetAccountID());
+		m_pForward->PushString(sAdr.String());
+		m_pForward->PushString(ExtractPlayerName(splitScreenClients));
+		m_pForward->PushStringEx(passwordNew, sizeof(passwordNew), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		m_pForward->PushStringEx(rejectReason, sizeof(rejectReason), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		m_pForward->Execute(&res);
 
-		if (res != Pl_Continue)
+		if(res != Pl_Continue)
 		{
-			if (res == Pl_Changed)
+			if(res == Pl_Changed)
 			{
-				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, ConnectClient, (address, nProtocol, iChallenge, nAuthProtocol, pchName, const_cast<const char*>(passwordBuffer), pCookie, cbCookie, pSplitPlayerConnectVector, bUnknown, platform, pUnknown, iUnknown));
+				RETURN_META_VALUE_MNEWPARAMS(MRES_HANDLED, nullptr, ConnectClient, (adr, protocol, challenge, authProtocol, name, passwordNew, hashedCDkey, cdKeyLen, splitScreenClients, isClientLowViolence, clientPlatform, pbEncryptionKey, nEncryptionKeyIndex));
 			}
-			else
-			{
-				SH_MCALL(iserver, RejectConnection)(address, rejectReason);
 
-				RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
+			if(m_iRejectConnectionOffset != -1)
+			{
+				CallVFMTFunc<void, const ns_address&>(m_iRejectConnectionOffset, iserver, adr, "%s", rejectReason);
 			}
+
+			RETURN_META_VALUE(MRES_SUPERCEDE, nullptr);
 		}
 	}
 
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
 }
 
-void CForwardManager::ClientConnectPost::Init()
+CForwardManager::ClientConnectPostHook::ClientConnectPostHook()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CBaseServer::ConnectClient", &iOffset))
-	{
-		SH_MANUALHOOK_RECONFIGURE(ConnectClient, iOffset, 0, 0);
-
-		pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
-	}
-	else smutils->LogError(myself, "Failed to get CBaseServer::ConnectClient offset, Hook ClientConnectPost will be unavailable.");
+	m_Hooks[PTaH_ClientConnectPost] = this;
 }
 
-void CForwardManager::ClientConnectPost::Shutdown()
+void CForwardManager::ClientConnectPostHook::Init()
 {
-	if (iOffset != -1)
+	if(BaseClass::Configure())
 	{
-		forwards->ReleaseForward(pForward);
-
-		if (iHookId != -1) SH_REMOVE_HOOK_ID(iHookId);
+		m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 4, nullptr, Param_Cell, Param_Cell, Param_String, Param_String);
 	}
 }
 
-bool CForwardManager::ClientConnectPost::UpdateForward(IPluginFunction* pFunc, bool bHook)
+int CForwardManager::ClientConnectPostHook::ManualHook()
 {
-	if (iOffset != -1)
-	{
-		bool bBuf;
-
-		if (bHook) bBuf = pForward->AddFunction(pFunc);
-		else bBuf = pForward->RemoveFunction(pFunc);
-
-		UpdateHook();
-
-		return bBuf;
-	}
-
-	return false;
+	return SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::ClientConnectPostHook::Handler), true);
 }
 
-void CForwardManager::ClientConnectPost::UpdateHook()
+IClient* CForwardManager::ClientConnectPostHook::Handler(const ns_address& adr, int protocol, int challenge, int authProtocol, const char* name, const char* password, const char* hashedCDkey, int cdKeyLen, CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform, const byte* pbEncryptionKey, int nEncryptionKeyIndex)
 {
-	if (iOffset != -1 && (pForward->GetFunctionCount() > 0) != bHooked)
-	{
-		bHooked = !bHooked;
-
-		if (bHooked) iHookId = SH_ADD_MANUALHOOK(ConnectClient, iserver, SH_MEMBER(this, &CForwardManager::ClientConnectPost::SHHook), true);
-		else if (iHookId != -1)
-		{
-			SH_REMOVE_HOOK_ID(iHookId);
-
-			iHookId = -1;
-		}
-	}
-}
-
-IClient* CForwardManager::ClientConnectPost::SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown)
-{
-	if (nAuthProtocol == 3 && cbCookie >= static_cast<int>(sizeof(CSteamID)))
+	if(authProtocol == 3 && cdKeyLen >= static_cast<int>(sizeof(CSteamID)))
 	{
 		IClient* pClient = META_RESULT_ORIG_RET(IClient*);
-
-		if (pClient)
+		if(pClient)
 		{
-			const CSteamID* SteamID = reinterpret_cast<const CSteamID*>(pCookie);
-			char ipString[16];
+			ns_address_render sAdr(adr);
 
-			V_snprintf(ipString, sizeof(ipString), "%u.%u.%u.%u", address.ip[0], address.ip[1], address.ip[2], address.ip[3]);
-
-			pForward->PushCell(pClient->GetPlayerSlot() + 1);
-			pForward->PushCell(SteamID->GetAccountID());
-			pForward->PushString(ipString);
-			pForward->PushString(ExtractPlayerName(pSplitPlayerConnectVector));
-			pForward->Execute(nullptr);
+			m_pForward->PushCell(pClient->GetPlayerSlot() + 1);
+			m_pForward->PushCell(reinterpret_cast<const CSteamID*>(hashedCDkey)->GetAccountID());
+			m_pForward->PushString(sAdr.String());
+			m_pForward->PushString(ExtractPlayerName(splitScreenClients));
+			m_pForward->Execute(nullptr);
 		}
 	}
 
 	RETURN_META_VALUE(MRES_IGNORED, nullptr);
 }
 
-CForwardManager::SendInventoryUpdateEventPost::SendInventoryUpdateEventPost()
+CForwardManager::InventoryUpdatePostHook::InventoryUpdatePostHook() : CBaseVPHook(true)
 {
-	bInGame = true;
+	m_Hooks[PTaH_InventoryUpdatePost] = this;
 }
 
-void CForwardManager::SendInventoryUpdateEventPost::Init()
+void CForwardManager::InventoryUpdatePostHook::Init()
 {
-	if (g_pGameConf[GameConf_PTaH]->GetOffset("CPlayerInventory::SendInventoryUpdateEvent", &iOffset))
+	int offset = -1;
+	if (!g_pGameConf[GameConf_PTaH]->GetOffset("CPlayerInventory::SendInventoryUpdateEvent", &offset))
 	{
-		SH_MANUALHOOK_RECONFIGURE(SendInventoryUpdateEvent, iOffset, 0, 0);
+		smutils->LogError(myself, "Failed to get CPlayerInventory::SendInventoryUpdateEvent offset, hook InventoryUpdatePost will be unavailable.");
 
-		pForward = forwards->CreateForwardEx(nullptr, ET_Hook, 2, nullptr, Param_Cell, Param_Cell);
+		return;
 	}
-	else smutils->LogError(myself, "Failed to get CPlayerInventory::SendInventoryUpdateEvent offset, Hook InventoryUpdatePost will be unavailable.");
+
+	SH_MANUALHOOK_RECONFIGURE(SetEntityModel, offset, 0, 0);
+
+	m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_Cell);
 }
 
-void CForwardManager::SendInventoryUpdateEventPost::Hook(int iClient)
+int CForwardManager::InventoryUpdatePostHook::VPHook(int iClient)
 {
-	if (bHooked && iHookId == -1)
-	{
-		CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(iClient);
+	CCSPlayerInventory* pPlayerInventory = CCSPlayerInventory::FromPlayer(gamehelpers->ReferenceToEntity(iClient));
 
-		CCSPlayerInventory* pPlayerInventory = CCSPlayerInventory::FromPlayer(pEntity);
-
-		iHookId = SH_ADD_MANUALVPHOOK(SendInventoryUpdateEvent, pPlayerInventory, SH_MEMBER(this, &CForwardManager::SendInventoryUpdateEventPost::SHHook), true);
-	}
+	return SH_ADD_MANUALVPHOOK(SendInventoryUpdateEvent, pPlayerInventory, SH_MEMBER(this, &CForwardManager::InventoryUpdatePostHook::Handler), true);
 }
 
-void CForwardManager::SendInventoryUpdateEventPost::SHHook()
+void CForwardManager::InventoryUpdatePostHook::Handler()
 {
 	CCSPlayerInventory* pPlayerInventory = META_IFACEPTR(CCSPlayerInventory);
 
-	pForward->PushCell(gamehelpers->EntityToBCompatRef(pPlayerInventory->ToPlayer()));
-	pForward->PushCell(reinterpret_cast<cell_t>(pPlayerInventory));
-	pForward->Execute(nullptr);
+	m_pForward->PushCell(gamehelpers->EntityToBCompatRef(pPlayerInventory->ToPlayer()));
+	m_pForward->PushCell(reinterpret_cast<cell_t>(pPlayerInventory));
+	m_pForward->Execute(nullptr);
 
 	RETURN_META(MRES_IGNORED);
 }

@@ -36,7 +36,6 @@
 #include <server_class.h>
 #include <ivoiceserver.h>
 #include <CDetour/detours.h>
-#include <netadr.h>
 #include <inetmessage.h>
 
 #ifdef PLATFORM_WINDOWS
@@ -44,6 +43,12 @@
 #else
 #define VCallingConvention __cdecl
 #endif
+
+template <typename T, typename ...Args, typename ...Va>
+constexpr T CallVFMTFunc(size_t index, void* pThis, Args... args, const char* fmt, Va... va) noexcept
+{
+	return reinterpret_cast<T(__cdecl*)(void*, Args..., const char*, ...)>(reinterpret_cast<void***>(pThis)[0][index])(pThis, args..., fmt, va...);
+}
 
 /**
  * @brief Sample implementation of the SDK Extension.

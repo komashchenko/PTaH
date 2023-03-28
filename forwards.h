@@ -25,289 +25,460 @@
 #include "natives.h"
 #include "classes.h"
 #include "netmessages.pb.h"
+#include <ns_address.h>
+#include <map>
 
-
-template <int Type, class NetMessage, int Group, bool reliable>
-class CNetMessagePB : public INetMessage, public NetMessage {
-public:
-	~CNetMessagePB() { }
-};
-
-typedef CNetMessagePB<16, CCLCMsg_SplitPlayerConnect, 0, true>	NetMsg_SplitPlayerConnect;
-
-class CEconItemView;
-class CGameClient;
-
-class CForwardManager : public IClientListener, public IPluginsListener
+class CForwardManager
 {
+	friend class CCSPlayer_FindMatchingWeaponsForTeamLoadoutClass;
+
 public:
 	void Init();
 	void Shutdown();
+	bool UpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook);
 
-	bool FunctionUpdateHook(PTaH_HookEvent htType, IPluginFunction* pFunction, bool bHook);
-
-	void LevelShutdown();
-
-public: // IClientListener
-	virtual void OnClientConnected(int iClient);
-	virtual void OnClientPutInServer(int iClient);
-	virtual void OnClientDisconnected(int iClient);
-
-public: // IPluginsListener
-	virtual void OnPluginUnloaded(IPlugin* plugin);
-
-	class TempleHookClient
+private:
+	class CBaseHook : public IPluginsListener
 	{
 	public:
-		TempleHookClient();
-
+		virtual void Init() = 0;
 		virtual void Shutdown();
-		void HookClient(int iClient);
-		void UnHookClient(int iClient);
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		virtual void UpdateHook();
+		virtual bool UpdateHook(SourcePawn::IPluginFunction* pFunction, bool bHook);
 
 	protected:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) = 0; //Crutch
+		CBaseHook();
+		virtual void UpdateInternalHook();
+		virtual void OnInternalHookActivated();
+		virtual void OnInternalHookDeactivated();
 
-		IChangeableForward* pForward = nullptr;
+	private: // IPluginsListener
+		void OnPluginUnloaded(IPlugin* plugin) override;
 
-		int iHookId[SM_MAXPLAYERS + 1];
-		bool bHooked = false;
-		int iOffset = -1;
+	protected:
+		IChangeableForward* m_pForward;
+		bool m_bHooked;
+
+	public:
+		class HookTypeRegistrator
+		{
+		public:
+			HookTypeRegistrator() = default;
+			HookTypeRegistrator(CBaseHook* pBaseHook, PTaH_HookEvent htType);
+		} m_HookType;
 	};
 
-	class TempleHookVP
+	/////////////////////////////////
+
+	class CBaseManualPlayerHook : public CBaseHook, public IClientListener
 	{
-	public:
-		void Shutdown();
-		virtual void Hook(int iClient) = 0;
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		typedef CBaseHook BaseClass;
 
 	protected:
-		IChangeableForward* pForward = nullptr;
+		CBaseManualPlayerHook();
 
-		int iHookId = -1;
+	private:
+		virtual int ManualHook(int iClient) = 0;
+
+	protected: // CBaseHook
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
+
+	private: // IClientListener
+		void OnClientPutInServer(int iClient) override;
+		void OnClientDisconnected(int iClient) override;
+
+	private:
+		int m_iHookID[SM_MAXPLAYERS + 1];
+	};
+
+	class CBaseVPHook : public CBaseHook, public IClientListener
+	{
+		typedef CBaseHook BaseClass;
+
+	protected:
+		CBaseVPHook(bool bInGame);
+
+	private:
+		virtual int VPHook(int iClient) = 0;
+		void OnClientValid(int iClient);
+
+	private: // CBaseHook
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
+
+	private: // IClientListener
+		void OnClientConnected(int iClient) override;
+		void OnClientPutInServer(int iClient) override;
+
+	private:
+		int m_iHookID;
+		bool m_bInGame;
+	};
+
+	class CBaseClientHook : public CBaseVPHook
+	{
+		typedef CBaseVPHook BaseClass;
+
+	protected:
+		CBaseClientHook();
+		IClient* ForceCastToIClient(IClient* pClient);
+
 #ifdef PLATFORM_LINUX
-		int iGameHookId = -1;
-#endif
-		bool bHooked = false;
-		int iOffset = -1;
-
-		bool bInGame = false;
-	};
-
-	class TempleHookIClient : public TempleHookVP
-	{
-	public:
-		virtual void Hook(int iClient) override;
+	private: // CBaseVPHook
+		void OnInternalHookDeactivated() override;
 
 	protected:
-		virtual int __SH_ADD_VPHOOK(IClient* pClient) = 0; // Crutch
+		int GetParentVFuncOffset(IClient* pClient, size_t vtbIndex);
 
-#ifdef PLATFORM_LINUX
-		int GetGameClientVFuncOffset(IClient* pClient, size_t vtbIndex);
+	protected:
+		int m_iGameHookId;
 #endif
 	};
 
-	class GiveNamedItemPre : public TempleHookClient
-	{
-	public:
-		void Init();
-		virtual void Shutdown() override;
-		virtual void UpdateHook() override;
+	/////////////////////////////////
 
-		bool bIgnoredCEconItemView = false;
+	class GiveNamedItemHook : public CBaseManualPlayerHook
+	{
+	protected:
+		bool Configure();
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		virtual const char* GetHookName() = 0;
+	};
 
-		CBaseEntity* SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin);
-
-		CDetour* pFindMatchingWeaponsForTeamLoadout = nullptr;
-	} GiveNamedItemPre;
-
-	class GiveNamedItemPost : public TempleHookClient
+	class GiveNamedItemPreHook : public GiveNamedItemHook
 	{
+		typedef GiveNamedItemHook BaseClass;
+		friend class CCSPlayer_FindMatchingWeaponsForTeamLoadoutClass;
+
 	public:
-		void Init();
+		GiveNamedItemPreHook();
+
+	private: // CBaseHook
+		void Init() override;
+		void Shutdown() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		CBaseEntity* Handler(const char* pchName, int iSubType, CEconItemView* pScriptItem, bool bForce, Vector* pOrigin);
 
-		CBaseEntity* SHHook(const char* szItem, int iSubType, CEconItemView* pView, bool removeIfNotCarried, Vector* pOrigin);
-	} GiveNamedItemPost;
-
-	class WeaponCanUsePre : public TempleHookClient
-	{
-	public:
-		void Init();
+		const char* GetHookName() override { return "GiveNamedItemPre"; }
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		CDetour* m_pFindMatchingWeaponsForTeamLoadoutHook;
+		int m_iFrameCount;
+	} m_GiveNamedItemPreHook;
 
-		bool SHHook(CBaseCombatWeapon* pWeapon);
-	} WeaponCanUsePre;
-
-	class WeaponCanUsePost : public TempleHookClient
+	class GiveNamedItemPostHook : public GiveNamedItemHook
 	{
+		typedef GiveNamedItemHook BaseClass;
+
 	public:
-		void Init();
+		GiveNamedItemPostHook();
+
+	private: // CBaseHook
+		void Init() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		CBaseEntity* Handler(const char* pchName, int iSubType, CEconItemView* pScriptItem, bool bForce, Vector* pOrigin);
 
-		bool SHHook(CBaseCombatWeapon* pWeapon);
-	} WeaponCanUsePost;
+		const char* GetHookName() override { return "GiveNamedItemPost"; }
+	} m_GiveNamedItemPostHook;
 
-	class SetPlayerModelPre : public TempleHookClient
+	/////////////////////////////////
+
+	class WeaponCanUseHook : public CBaseManualPlayerHook
 	{
-	public:
-		void Init();
+	protected:
+		bool Configure();
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		virtual const char* GetHookName() = 0;
+	};
 
-		CBaseEntity* SHHook(const char* sModel);
-	} SetPlayerModelPre;
-
-	class SetPlayerModelPost : public TempleHookClient
+	class WeaponCanUsePreHook : public WeaponCanUseHook
 	{
+		typedef WeaponCanUseHook BaseClass;
+
 	public:
-		void Init();
+		WeaponCanUsePreHook();
+
+	private: // CBaseHook
+		void Init() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
 
 	private:
-		virtual int __SH_ADD_MANUALHOOK(CBaseEntity* pEnt) override;
+		bool Handler(CBaseCombatWeapon* pWeapon);
 
-		CBaseEntity* SHHook(const char* sModel);
-	} SetPlayerModelPost;
+		const char* GetHookName() override { return "WeaponCanUsePre"; }
+	} m_WeaponCanUsePreHook;
 
-	class ClientVoiceToPre
+	class WeaponCanUsePostHook : public WeaponCanUseHook
+	{
+		typedef WeaponCanUseHook BaseClass;
+
+	public:
+		WeaponCanUsePostHook();
+
+	private: // CBaseHook
+		void Init() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
+
+	private:
+		bool Handler(CBaseCombatWeapon* pWeapon);
+
+		const char* GetHookName() override { return "WeaponCanUsePost"; }
+	} m_WeaponCanUsePostHook;
+
+	/////////////////////////////////
+
+	class SetPlayerModelHook : public CBaseManualPlayerHook
+	{
+	protected:
+		bool Configure();
+
+	private:
+		virtual const char* GetHookName() = 0;
+	};
+
+	class SetPlayerModelPreHook : public SetPlayerModelHook
+	{
+		typedef SetPlayerModelHook BaseClass;
+
+	public:
+		SetPlayerModelPreHook();
+
+	private: // CBaseHook
+		void Init() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
+
+	private:
+		void Handler(const char* pszModelName);
+
+		const char* GetHookName() override { return "SetPlayerModelPre"; }
+	} m_SetPlayerModelPreHook;
+
+	class SetPlayerModelPostHook : public SetPlayerModelHook
+	{
+		typedef SetPlayerModelHook BaseClass;
+
+	public:
+		SetPlayerModelPostHook();
+
+	private: // CBaseHook
+		void Init() override;
+
+	private: // CBaseManualPlayerHook
+		int ManualHook(int iClient) override;
+
+	private:
+		void Handler(const char* pszModelName);
+
+		const char* GetHookName() override { return "SetPlayerModelPost"; }
+	} m_SetPlayerModelPostHook;
+
+	/////////////////////////////////
+
+	class ClientVoiceToPreHook : public CBaseHook
+	{
+		typedef CBaseHook BaseClass;
+
+	public:
+		ClientVoiceToPreHook();
+
+	private: // CBaseHook
+		void Init() override;
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
+
+	private:
+		bool Handler(int iReceiver, int iSender, bool bListen);
+		void ClientVoiceHandler(edict_t* pEdict);
+
+	private:
+		bool m_bStartVoice[SM_MAXPLAYERS + 1];
+	} m_ClientVoiceToPreHook;
+
+	class ClientVoiceToPostHook : public CBaseHook
+	{
+		typedef CBaseHook BaseClass;
+
+	public:
+		ClientVoiceToPostHook();
+
+	private: // CBaseHook
+		void Init() override;
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
+
+	private:
+		bool Handler(int iReceiver, int iSender, bool bListen);
+	} m_ClientVoiceToPostHook;
+
+	/////////////////////////////////
+
+	class ConsolePrintPreHook : public CBaseClientHook
 	{
 	public:
-		void Init();
-		void Shutdown();
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		ConsolePrintPreHook();
 
-	protected:
-		bool SHHook(int iReceiver, int iSender, bool bListen);
-		void SHHookClientVoice(edict_t* pEdict);
+	private: // CBaseHook
+		void Init() override;
 
-		IChangeableForward* pForward = nullptr;
+	private: // CBaseVPHook
+		int VPHook(int iClient) override;
 
-		bool bStartVoice[SM_MAXPLAYERS + 1] = { };
-		bool bHooked = false;
-	} ClientVoiceToPre;
+	private:
+		void Handler(const char* szFormat);
+	} m_ConsolePrintPreHook;
 
-	class ClientVoiceToPost
+	class ConsolePrintPostHook : public CBaseClientHook
 	{
 	public:
-		void Init();
-		void Shutdown();
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		ConsolePrintPostHook();
 
-	protected:
-		bool SHHook(int iReceiver, int iSender, bool bListen);
+	private: // CBaseHook
+		void Init() override;
 
-		IChangeableForward* pForward = nullptr;
+	private: // CBaseVPHook
+		int VPHook(int iClient) override;
 
-		bool bHooked = false;
-	} ClientVoiceToPost;
+	private:
+		void Handler(const char* szFormat);
+	} m_ConsolePrintPostHook;
 
-	class ConsolePrintPre : public TempleHookIClient
+	/////////////////////////////////
+
+	class ExecuteStringCommandPreHook : public CBaseClientHook
 	{
 	public:
-		void Init();
+		ExecuteStringCommandPreHook();
 
-	protected:
-		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
+	private: // CBaseHook
+		void Init() override;
 
-		void SHHook(const char* szFormat);
-	} ConsolePrintPre;
+	private: // CBaseVPHook
+		int VPHook(int iClient) override;
 
-	class ConsolePrintPost : public TempleHookIClient
+	private:
+		bool Handler(const char* pCommandString);
+	} m_ExecuteStringCommandPreHook;
+
+	class ExecuteStringCommandPostHook : public CBaseClientHook
 	{
 	public:
-		void Init();
+		ExecuteStringCommandPostHook();
 
-	protected:
-		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
+	private: // CBaseHook
+		void Init() override;
 
-		void SHHook(const char* szFormat);
-	} ConsolePrintPost;
+	private: // CBaseVPHook
+		int VPHook(int iClient) override;
 
-	class ExecuteStringCommandPre : public TempleHookIClient
+	private:
+		bool Handler(const char* pCommandString);
+	} m_ExecuteStringCommandPostHook;
+
+	/////////////////////////////////
+
+	class ClientConnectHook : public CBaseHook
 	{
-	public:
-		void Init();
+		typedef CBaseHook BaseClass;
 
 	protected:
-		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
+		ClientConnectHook();
+		bool Configure();
+		const char* ExtractPlayerName(CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients);
 
-		bool SHHook(const char* pCommandString);
-	} ExecuteStringCommandPre;
+	private:
+		virtual const char* GetHookName() = 0;
+		virtual int ManualHook() = 0;
 
-	class ExecuteStringCommandPost : public TempleHookIClient
+	private: // CBaseHook
+		void OnInternalHookActivated() override;
+		void OnInternalHookDeactivated() override;
+
+	private:
+		int m_iHookID;
+	};
+
+	class ClientConnectPreHook : public ClientConnectHook
 	{
+		typedef ClientConnectHook BaseClass;
+
 	public:
-		void Init();
+		ClientConnectPreHook();
 
-	protected:
-		virtual int __SH_ADD_VPHOOK(IClient* pClient) override;
+	private: // CBaseHook
+		void Init() override;
 
-		bool SHHook(const char* pCommandString);
-	} ExecuteStringCommandPost;
+	private: // ClientConnectHook
+		int ManualHook() override;
 
-	class ClientConnectPre
+	private:
+		IClient* Handler(const ns_address& adr, int protocol, int challenge, int authProtocol, const char* name, const char* password, const char* hashedCDkey, int cdKeyLen, CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform, const byte* pbEncryptionKey, int nEncryptionKeyIndex);
+
+		const char* GetHookName() override { return "ClientConnectPre"; }
+
+	private:
+		int m_iRejectConnectionOffset;
+	} m_ClientConnectPreHook;
+
+	class ClientConnectPostHook : public ClientConnectHook
 	{
+		typedef ClientConnectHook BaseClass;
+
 	public:
-		void Init();
-		void Shutdown();
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		ClientConnectPostHook();
 
-	protected:
-		IClient* SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown);
+	private: // CBaseHook
+		void Init() override;
 
-		IChangeableForward* pForward = nullptr;
+	private: // ClientConnectHook
+		int ManualHook() override;
 
-		bool bHooked = false;
-		int iOffset = -1;
-		int iHookId = -1;
-	} ClientConnectPre;
+	private:
+		IClient* Handler(const ns_address& adr, int protocol, int challenge, int authProtocol, const char* name, const char* password, const char* hashedCDkey, int cdKeyLen, CUtlVector<CCLCMsg_SplitPlayerConnect_t*>& splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform, const byte* pbEncryptionKey, int nEncryptionKeyIndex);
 
-	class ClientConnectPost
+		const char* GetHookName() override { return "ClientConnectPost"; }
+	} m_ClientConnectPostHook;
+
+	/////////////////////////////////
+
+	class InventoryUpdatePostHook : public CBaseVPHook
 	{
+		typedef CBaseVPHook BaseClass;
+
 	public:
-		void Init();
-		void Shutdown();
-		bool UpdateForward(IPluginFunction* pFunc, bool bHook);
-		void UpdateHook();
+		InventoryUpdatePostHook();
 
-	protected:
-		IClient* SHHook(const netadr_t& address, int nProtocol, int iChallenge, int nAuthProtocol, const char* pchName, const char* pchPassword, const char* pCookie, int cbCookie, CUtlVector<NetMsg_SplitPlayerConnect*>& pSplitPlayerConnectVector, bool bUnknown, CrossPlayPlatform_t platform, const unsigned char* pUnknown, int iUnknown);
+	private: // CBaseHook
+		void Init() override;
 
-		IChangeableForward* pForward = nullptr;
+	private: // CBaseVPHook
+		int VPHook(int iClient) override;
 
-		bool bHooked = false;
-		int iOffset = -1;
-		int iHookId = -1;
-	} ClientConnectPost;
+	private:
+		void Handler();
+	} m_InventoryUpdatePostHook;
 
-	class SendInventoryUpdateEventPost : public TempleHookVP
-	{
-	public:
-		SendInventoryUpdateEventPost();
+	/////////////////////////////////
 
-		void Init();
-		virtual void Hook(int iClient) override;
-
-	protected:
-		void SHHook();
-	} InventoryUpdatePost;
+private:
+	static std::map<PTaH_HookEvent, CBaseHook*> m_Hooks;
 };
 
 extern CForwardManager g_ForwardManager;

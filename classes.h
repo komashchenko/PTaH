@@ -25,6 +25,7 @@
 #include "netmessages.pb.h"
 #include "inetchannelinfo.h"
 #include "igameevents.h"
+#include "steamtypes.h"
 
 typedef CBaseEntity CBaseCombatWeapon;
 class CAttribute_String;
@@ -348,6 +349,15 @@ public:
 	CEconItemView* GetItemInLoadout(int iTeam, int iLoadoutSlot);
 	CUtlVector<CEconItemView*>* GetItemVector();
 };
+
+template <int Type, class NetMessage, int Group, bool reliable>
+class CNetMessagePB : public INetMessage, public NetMessage
+{
+public:
+	~CNetMessagePB() {}
+};
+
+typedef CNetMessagePB<16, CCLCMsg_SplitPlayerConnect, 0, true>	CCLCMsg_SplitPlayerConnect_t;
 
 class CNetMessagePB_PlayerAvatarData : public INetMessage, public CNETMsg_PlayerAvatarData
 {
