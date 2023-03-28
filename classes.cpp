@@ -524,7 +524,7 @@ CEconItemAttribute* CAttributeList::GetAttributeByDefIndex(uint16_t unAttrDefInd
 	return nullptr;
 }
 
-bool CNetMessagePB_PlayerAvatarData::WriteToBuffer(bf_write& buffer)
+bool CNetMessagePB_PlayerAvatarData::WriteToBuffer(bf_write& buffer) const
 {
 	int size = ByteSize();
 

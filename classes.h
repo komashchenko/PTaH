@@ -365,7 +365,7 @@ public:
 	CNetMessagePB_PlayerAvatarData() { }
 
 	virtual bool ReadFromBuffer(bf_read& buffer) { return false; }
-	virtual bool WriteToBuffer(bf_write& buffer);
+	virtual bool WriteToBuffer(bf_write& buffer) const;
 	virtual const char* ToString() const;
 	virtual int GetType() const { return net_PlayerAvatarData; }
 	virtual size_t GetSize() const { return sizeof(*this); }
