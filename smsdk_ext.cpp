@@ -256,7 +256,7 @@ const char *SDKExtension::GetExtensionDescription()
 
 const char *SDKExtension::GetExtensionVerString()
 {
-	return SMEXT_CONF_VERSION;
+	return SMEXT_CONF_VERSION BUILD_ID;
 }
 
 const char *SDKExtension::GetExtensionName()

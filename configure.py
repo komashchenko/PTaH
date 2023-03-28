@@ -18,5 +18,7 @@ builder.options.add_option('--enable-optimize', action='store_const', const='1',
                        help='Enable optimization')
 builder.options.add_option('--enable-lto', action='store_const', const='1', dest='lto',
                        help='Enable link time optimization')
+builder.options.add_option('--build-id', type=str, dest='build_id', default=None,
+                       help='Build ID')
 
 builder.Configure()

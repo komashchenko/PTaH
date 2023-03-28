@@ -129,6 +129,9 @@ class ExtensionConfig(object):
     if builder.options.debug == '1':
       cxx.defines += ['DEBUG', '_DEBUG']
 
+    # Build ID
+    cxx.defines += ['BUILD_ID="' + ('-' + builder.options.build_id if builder.options.build_id else '') + '"']
+
     # Platform-specifics
     if builder.target_platform == 'linux':
       self.configure_linux(cxx)
@@ -178,7 +181,7 @@ class ExtensionConfig(object):
     if cxx.version >= 'clang-3.6':
       cxx.cxxflags += ['-Wno-inconsistent-missing-override']
     if cxx.version >= 'clang-10.0':
-      cxx.cxxflags += ['-Wno-implicit-const-int-float-conversion']
+      cxx.cxxflags += ['-Wno-implicit-int-float-conversion']
     if have_clang or (cxx.version >= 'gcc-4.6'):
       cxx.cflags += ['-Wno-narrowing']
     if have_clang or (cxx.version >= 'gcc-4.7'):
@@ -238,6 +241,7 @@ class ExtensionConfig(object):
       'uuid.lib',
       'odbc32.lib',
       'odbccp32.lib',
+      'Ws2_32.lib',
     ]
 
     if builder.options.opt == '1':

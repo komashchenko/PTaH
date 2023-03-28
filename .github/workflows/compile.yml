@@ -1,0 +1,151 @@
+name: Build
+
+on:
+  push:
+    paths-ignore: 
+      - LICENSE
+      - README.md
+
+  pull_request:
+    paths-ignore: 
+      - LICENSE
+      - README.md
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os_short }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Compile on Linux & Windows.
+        os: 
+          - ubuntu-20.04
+          - windows-latest
+
+        include:
+          - os: ubuntu-20.04
+            os_short: linux
+          - os: windows-latest
+            os_short: win
+    steps:
+      - name: Short SHA
+        shell: bash
+        run: |
+          echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      
+      # Setup Python for AMBuild.
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      
+      # Install dependencies
+      - name: Install AMBuild
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install git+https://github.com/alliedmodders/ambuild
+
+      - name: Install dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y clang g++-multilib
+
+      - name: Select clang compiler
+        if: runner.os == 'Linux'
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+          clang --version
+          clang++ --version
+
+      - name: Find Visual C++ compilers and make all environment variables global (W)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          :: See https://github.com/microsoft/vswhere/wiki/Find-VC
+          for /f "usebackq delims=*" %%i in (`vswhere -latest -property installationPath`) do (
+            call "%%i"\Common7\Tools\vsdevcmd.bat -arch=x86 -host_arch=x64
+          )
+
+          :: Loop over all environment variables and make them global.
+          for /f "delims== tokens=1,2" %%a in ('set') do (
+            echo>>"%GITHUB_ENV%" %%a=%%b
+          )
+
+      # Checkout repos
+      - name: Checkout Metamod:Source
+        uses: actions/checkout@v3
+        with:
+          repository: alliedmodders/metamod-source
+          ref: 1.11-dev
+          path: metamod-source
+      
+      - name: Checkout SourceMod
+        uses: actions/checkout@v3
+        with:
+          repository: alliedmodders/sourcemod
+          ref: 1.11-dev
+          path: sourcemod
+          submodules: true
+      
+      - name: Checkout hl2sdk-csgo
+        uses: actions/checkout@v3
+        with:
+          repository: Wend4r/hl2sdk
+          ref: csgo
+          path: hl2sdk-csgo
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: project
+
+      # Build
+      - name: Use lto
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "BUILD_LTO=--enable-lto" >> $GITHUB_ENV
+      
+      - name: Build
+        shell: bash
+        run: |
+          cd project && mkdir build && cd build
+          python ../configure.py --enable-optimize --build-id ${{ env.GITHUB_SHA_SHORT }} ${{ env.BUILD_LTO }}
+          ambuild
+
+      - name: Copy pdb
+        if: runner.os == 'Windows'
+        working-directory: project/build
+        run: cp PTaH.ext.2.csgo/PTaH.ext.2.csgo.pdb package/addons/sourcemod/extensions
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}
+          path: project/build/package
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Package
+        run: |
+          7z a -mx9 linux.zip ./Linux/*
+          7z a -mx9 -xr!*.pdb windows.zip ./Windows/*
+      - name: Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: '*.zip'
+          tag: ${{ github.ref }}
+          file_glob: true
