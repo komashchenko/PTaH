@@ -178,33 +178,6 @@ public:
 };
 static_assert(sizeof(CEconItemAttribute) == 24, "CEconItemAttribute - incorrect size on this compiler");
 
-#ifdef PLATFORM_WINDOWS
-//https://github.com/alliedmodders/sourcemod/blob/c5619f887d6d13643ad8281e8e7479668226c342/core/HalfLife2.cpp#L1234
-template< class T, class I = int >
-class CUtlMemoryGlobalMalloc : public CUtlMemory< T, I >
-{
-	typedef CUtlMemory< T, I > BaseClass;
-
-public:
-	using BaseClass::BaseClass;
-
-	void Purge()
-	{
-		if (!IsExternallyAllocated())
-		{
-			if (m_pMemory)
-			{
-				UTLMEMORY_TRACK_FREE();
-				g_pMemAlloc->Free((void*)m_pMemory);
-				m_pMemory = 0;
-			}
-			m_nAllocationCount = 0;
-		}
-		BaseClass::Purge();
-	}
-};
-#endif
-
 class CAttributeList
 {
 public:
@@ -219,11 +192,7 @@ public:
 
 private:
 	void* m_pVTable; //0
-#ifdef PLATFORM_WINDOWS
-	CUtlVector<CEconItemAttribute, CUtlMemoryGlobalMalloc<CEconItemAttribute> > m_Attributes; //4 (20)
-#else
 	CUtlVector<CEconItemAttribute> m_Attributes; //4 (20)
-#endif
 	void* m_pAttributeManager; //24
 };
 

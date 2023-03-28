@@ -3,12 +3,12 @@ import os, sys
 
 projectName = 'PTaH'
 
-# smsdk_ext.cpp will be automatically added later
 sourceFiles = [
   'extension.cpp',
   'forwards.cpp',
   'natives.cpp',
-  'classes.cpp'
+  'classes.cpp',
+  'smsdk_ext.cpp'
 ]
 
 ###############
@@ -23,7 +23,8 @@ binary = Extension.HL2Config(project, projectName + '.ext.' + Extension.sdk.ext,
 compiler = binary.compiler
 
 binary.sources += [
-  os.path.join(Extension.sm_root, 'public', 'smsdk_ext.cpp'),
+  # Memory management via g_pMemAlloc
+  os.path.join(Extension.sdk.path, 'public', 'tier0', 'memoverride.cpp'),
   
   os.path.join(Extension.sm_root, 'public', 'CDetour', 'detours.cpp'),
   os.path.join(Extension.sm_root, 'public', 'asm', 'asm.c'),
