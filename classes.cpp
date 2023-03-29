@@ -2,7 +2,7 @@
 * vim: set ts=4 :
 * =============================================================================
 * SourceMod P Tools and Hooks Extension
-* Copyright (C) 2016-2020 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
+* Copyright (C) 2016-2023 Phoenix (˙·٠●Феникс●٠·˙).  All rights reserved.
 * =============================================================================
 *
 * This program is free software; you can redistribute it and/or modify it under
