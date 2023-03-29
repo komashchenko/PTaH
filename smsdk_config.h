@@ -29,10 +29,10 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"PTaH"
 #define SMEXT_CONF_DESCRIPTION	"Additional CS:GO Hooks and Natives"
-#define SMEXT_CONF_VERSION		"1.1.3"
-#define PTaH_VERSION			101030
+#define SMEXT_CONF_VERSION		"1.1.4"
+#define PTaH_VERSION			101040
 #define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
-#define SMEXT_CONF_URL			"https://zizt.ru/ | https://hlmod.ru"
+#define SMEXT_CONF_URL			"https://github.com/komashchenko/PTaH"
 #define SMEXT_CONF_LOGTAG		"PTaH"
 #define SMEXT_CONF_LICENSE		"GPL"
 #define SMEXT_CONF_DATESTRING	__DATE__
@@ -46,7 +46,7 @@
  * @brief Sets whether or not this plugin required Metamod.
  * NOTE: Uncomment to enable, comment to disable.
  */
-#define SMEXT_CONF_METAMOD		
+#define SMEXT_CONF_METAMOD
 
 /** Enable interfaces you want to use here by uncommenting lines */
 #define SMEXT_ENABLE_FORWARDSYS
