@@ -182,7 +182,7 @@ ESchemaAttributeType CEconItemAttributeDefinition::GetAttributeType()
 
 int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 {
-	static int (VCallingConvention* GetLoadoutSlot)(void*, int) = nullptr;
+	static int (WIN_LINUX(__thiscall, __cdecl)* GetLoadoutSlot)(void*, int) = nullptr;
 
 	if (GetLoadoutSlot == nullptr)
 	{
@@ -245,7 +245,7 @@ int CEconItemDefinition::GetNumSupportedStickerSlots()
 		}
 	}
 
-	return ((int(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+	return CallVFunc<int>(offset, this);
 }
 
 const char* CEconItemDefinition::GetInventoryImage()
@@ -262,7 +262,7 @@ const char* CEconItemDefinition::GetInventoryImage()
 		}
 	}
 
-	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+	return CallVFunc<const char*>(offset, this);
 }
 
 const char* CEconItemDefinition::GetBasePlayerDisplayModel()
@@ -279,7 +279,7 @@ const char* CEconItemDefinition::GetBasePlayerDisplayModel()
 		}
 	}
 
-	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+	return CallVFunc<const char*>(offset, this);
 }
 
 const char* CEconItemDefinition::GetWorldDisplayModel()
@@ -296,7 +296,7 @@ const char* CEconItemDefinition::GetWorldDisplayModel()
 		}
 	}
 
-	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+	return CallVFunc<const char*>(offset, this);
 }
 
 const char* CEconItemDefinition::GetWorldDroppedModel()
@@ -313,7 +313,7 @@ const char* CEconItemDefinition::GetWorldDroppedModel()
 		}
 	}
 
-	return ((const char*(VCallingConvention*)(void*))(*(void***)this)[offset])(this);
+	return CallVFunc<const char*>(offset, this);
 }
 
 const char* CEconItemDefinition::GetDefinitionName()
@@ -434,7 +434,7 @@ CEconItemView* CCSPlayerInventory::GetItemInLoadout(int iTeam, int iLoadoutSlot)
 		}
 	}
 
-	return ((CEconItemView*(VCallingConvention*)(void*, int, int))(*(void***)this)[offset])(this, iTeam, iLoadoutSlot);
+	return CallVFunc<CEconItemView*, int, int>(offset, this, iTeam, iLoadoutSlot);
 }
 
 CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItemVector()

@@ -38,17 +38,25 @@
 #include <CDetour/detours.h>
 #include <inetmessage.h>
 
+
 #ifdef PLATFORM_WINDOWS
-#define VCallingConvention __thiscall
+#define WIN_LINUX(win, linux) win
 #else
-#define VCallingConvention __cdecl
+#define WIN_LINUX(win, linux) linux
 #endif
+
+template <typename T, typename ...Args>
+constexpr T CallVFunc(size_t index, void* pThis, Args... args) noexcept
+{
+    return reinterpret_cast<T(WIN_LINUX(__thiscall, __cdecl)*)(void*, Args...)>(reinterpret_cast<void***>(pThis)[0][index])(pThis, args...);
+}
 
 template <typename T, typename ...Args, typename ...Va>
 constexpr T CallVFMTFunc(size_t index, void* pThis, Args... args, const char* fmt, Va... va) noexcept
 {
 	return reinterpret_cast<T(__cdecl*)(void*, Args..., const char*, ...)>(reinterpret_cast<void***>(pThis)[0][index])(pThis, args..., fmt, va...);
 }
+
 
 /**
  * @brief Sample implementation of the SDK Extension.

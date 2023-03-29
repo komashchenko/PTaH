@@ -235,13 +235,14 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 	}
 
 	char* strSource; pContext->LocalToString(params[2], &strSource);
-	Vector Origin; Origin.Invalidate();
+	bool bOriginIsNull = true;
+	Vector Origin;
 
 	if (params[0] > 3)
 	{
 		cell_t* source_origin; pContext->LocalToPhysAddr(params[4], &source_origin);
 
-		if (source_origin != pContext->GetNullRef(SP_NULL_VECTOR))
+		if (!(bOriginIsNull = source_origin == pContext->GetNullRef(SP_NULL_VECTOR)))
 		{
 			Origin.x = sp_ctof(source_origin[0]);
 			Origin.y = sp_ctof(source_origin[1]);
@@ -262,11 +263,9 @@ static cell_t PTaH_GivePlayerItem(IPluginContext* pContext, const cell_t* params
 	}
 
 	CBaseEntity* pEntity = gamehelpers->ReferenceToEntity(params[1]);
-
 	CEconItemView* pItemView = reinterpret_cast<CEconItemView*>(params[3]);
 
-	CBaseEntity* pItem = ((CBaseEntity*(VCallingConvention*)(void*, const char*, int, CEconItemView*, bool, Vector*))
-		(*(void***)pEntity)[iGiveNamedItemOffset])(pEntity, strSource, 0, pItemView, false, Origin.IsValid() ? &Origin : nullptr);
+	CBaseEntity* pItem = CallVFunc<CBaseEntity*, const char*, int, CEconItemView*, bool, Vector*>(iGiveNamedItemOffset, pEntity, strSource, 0, pItemView, false, bOriginIsNull ? nullptr : &Origin);
 
 	return gamehelpers->EntityToBCompatRef(pItem);
 }
@@ -305,7 +304,7 @@ static cell_t PTaH_ForceFullUpdate(IPluginContext* pContext, const cell_t* param
 	IClient* pClient = iserver->GetClient(params[1] - 1);
 	CGameClient* pGameClient = static_cast<CGameClient*>(pClient);
 
-	((bool(VCallingConvention*)(void*, int))(*(void***)pGameClient)[offset])(pGameClient, -1);
+	CallVFunc<bool, int>(offset, pGameClient, -1);
 
 	return 0;
 }
@@ -432,12 +431,8 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 	Angles.y = sp_ctof(source_angles[1]);
 	Angles.z = sp_ctof(source_angles[2]);
 
-#ifdef PLATFORM_WINDOWS
-	//Very similar to __fastcall, but does not clean stack.
-	static void (__fastcall* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
-#else
-	static void (__cdecl* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
-#endif
+	// Windows - very similar to __fastcall, but does not clean stack.
+	static void (WIN_LINUX(__fastcall, __cdecl)* FX_FireBullets)(int, CBaseCombatWeapon*, CEconItemView*, Vector*, QAngle*, int, int, float, float, float, float, int, float) = nullptr;
 
 	if (FX_FireBullets == nullptr)
 	{
