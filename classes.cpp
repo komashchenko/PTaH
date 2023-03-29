@@ -25,20 +25,16 @@
 void* CEconItemSchema::operator new(size_t) throw()
 {
 	//Called once, no static needed
-	CEconItemSchema* (*GetItemSchema)(void);
+	uintptr_t (*GetItemSchema)(void);
 
-	if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", (void**)&GetItemSchema) || !GetItemSchema)
+	if (!g_pGameConf[GameConf_CSST]->GetMemSig("GetItemSchema", reinterpret_cast<void**>(&GetItemSchema)) || !GetItemSchema)
 	{
 		smutils->LogError(myself, "Failed to get GetItemSchema function.");
 
 		return nullptr;
 	}
 
-#ifdef PLATFORM_WINDOWS
-	return GetItemSchema() + sizeof(void*);
-#else
-	return GetItemSchema();
-#endif
+	return reinterpret_cast<CEconItemSchema*>(GetItemSchema() + WIN_LINUX(sizeof(void*), 0x0));
 };
 
 CUtlHashMapLarge<int, CEconItemDefinition*>* CEconItemSchema::GetItemDefinitionMap()
@@ -55,7 +51,7 @@ CUtlHashMapLarge<int, CEconItemDefinition*>* CEconItemSchema::GetItemDefinitionM
 		}
 	}
 	
-	return (CUtlHashMapLarge<int, CEconItemDefinition*>*)((intptr_t)this + offset);
+	return reinterpret_cast<CUtlHashMapLarge<int, CEconItemDefinition*>*>(reinterpret_cast<intptr_t>(this) + offset);
 }
 
 CUtlVector<CEconItemAttributeDefinition*>* CEconItemSchema::GetAttributeDefinitionContainer()
@@ -72,7 +68,7 @@ CUtlVector<CEconItemAttributeDefinition*>* CEconItemSchema::GetAttributeDefiniti
 		}
 	}
 
-	return (CUtlVector<CEconItemAttributeDefinition*>*)((intptr_t)this + offset);
+	return reinterpret_cast<CUtlVector<CEconItemAttributeDefinition*>*>(reinterpret_cast<intptr_t>(this) + offset);
 }
 
 CEconItemDefinition* CEconItemSchema::GetItemDefinitionByName(const char* pszDefName)
@@ -186,7 +182,7 @@ int CEconItemDefinition::GetLoadoutSlot(int iTeam)
 
 	if (GetLoadoutSlot == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CCStrike15ItemDefinition::GetLoadoutSlot", (void**)&GetLoadoutSlot) || !GetLoadoutSlot)
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("CCStrike15ItemDefinition::GetLoadoutSlot", reinterpret_cast<void**>(&GetLoadoutSlot)) || !GetLoadoutSlot)
 		{
 			smutils->LogError(myself, "Failed to get CCStrike15ItemDefinition::GetLoadoutSlot function.");
 
@@ -211,7 +207,7 @@ int CEconItemDefinition::GetUsedByTeam()
 		}
 	}
 
-	CBitVec<4>* pClassUsability = (CBitVec<4>*)((intptr_t)this + offset);
+	CBitVec<4>* pClassUsability = reinterpret_cast<CBitVec<4>*>(reinterpret_cast<intptr_t>(this) + offset);
 	
 	if (pClassUsability->IsBitSet(2) && pClassUsability->IsBitSet(3))
 	{
@@ -330,7 +326,7 @@ const char* CEconItemDefinition::GetDefinitionName()
 		}
 	}
 
-	return *(const char**)((intptr_t)this + offset);
+	return *reinterpret_cast<const char**>(reinterpret_cast<intptr_t>(this) + offset);
 }
 
 // Thank you Kailo
@@ -365,7 +361,7 @@ void* CPlayerVoiceListener::operator new(size_t) throw()
 
 bool CPlayerVoiceListener::IsPlayerSpeaking(int iClient)
 {
-	return *(float*)((intptr_t)this + 4 * iClient + 12) + 0.5f > gpGlobals->curtime;
+	return *reinterpret_cast<float*>(reinterpret_cast<intptr_t>(this) + 4 * iClient + 12) + 0.5f > gpGlobals->curtime;
 }
 
 intptr_t CCSPlayerInventory::GetInventoryOffset()
@@ -390,7 +386,7 @@ intptr_t CCSPlayerInventory::GetInventoryOffset()
 			return -1;
 		}
 
-		iInventoryOffset = *(intptr_t*)((intptr_t)addr + iInventoryOffset);
+		iInventoryOffset = *reinterpret_cast<intptr_t*>(reinterpret_cast<intptr_t>(addr) + iInventoryOffset);
 	}
 
 	return iInventoryOffset;
@@ -405,7 +401,7 @@ CCSPlayerInventory* CCSPlayerInventory::FromPlayer(CBaseEntity* pPlayer)
 		return nullptr;
 	}
 
-	return (CCSPlayerInventory*)((intptr_t)pPlayer + offset);
+	return reinterpret_cast<CCSPlayerInventory*>(reinterpret_cast<intptr_t>(pPlayer) + offset);
 }
 
 CBaseEntity* CCSPlayerInventory::ToPlayer()
@@ -417,7 +413,7 @@ CBaseEntity* CCSPlayerInventory::ToPlayer()
 		return nullptr;
 	}
 
-	return (CBaseEntity*)((intptr_t)this - offset);
+	return reinterpret_cast<CBaseEntity*>(reinterpret_cast<intptr_t>(this) - offset);
 }
 
 CEconItemView* CCSPlayerInventory::GetItemInLoadout(int iTeam, int iLoadoutSlot)
@@ -451,7 +447,7 @@ CUtlVector<CEconItemView*>* CCSPlayerInventory::GetItemVector()
 		}
 	}
 
-	return (CUtlVector<CEconItemView*>*)((intptr_t)this + offset);
+	return reinterpret_cast<CUtlVector<CEconItemView*>*>(reinterpret_cast<intptr_t>(this) + offset);
 }
 
 CEconItemAttribute::CEconItemAttribute()

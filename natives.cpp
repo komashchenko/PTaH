@@ -436,7 +436,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 
 	if (FX_FireBullets == nullptr)
 	{
-		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", (void**)&FX_FireBullets) || !FX_FireBullets)
+		if (!g_pGameConf[GameConf_PTaH]->GetMemSig("FX_FireBullets", reinterpret_cast<void**>(&FX_FireBullets)) || !FX_FireBullets)
 		{
 			smutils->LogError(myself, "Failed to get FX_FireBullets function.");
 
@@ -454,7 +454,7 @@ static cell_t PTaH_FX_FireBullets(IPluginContext* pContext, const cell_t* params
 		m_bLagCompensationOffset = info.actual_offset;
 	}
 
-	bool* bLagCompensation = (bool*)((intptr_t)pEntity + m_bLagCompensationOffset);
+	bool* bLagCompensation = reinterpret_cast<bool*>(reinterpret_cast<intptr_t>(pEntity) + m_bLagCompensationOffset);
 	bool bSave = *bLagCompensation;
 	*bLagCompensation = false;
 
