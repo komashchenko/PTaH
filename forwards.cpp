@@ -1257,7 +1257,7 @@ void CForwardManager::InventoryUpdatePostHook::Init()
 		return;
 	}
 
-	SH_MANUALHOOK_RECONFIGURE(SetEntityModel, offset, 0, 0);
+	SH_MANUALHOOK_RECONFIGURE(SendInventoryUpdateEvent, offset, 0, 0);
 
 	m_pForward = forwards->CreateForwardEx(nullptr, ET_Ignore, 2, nullptr, Param_Cell, Param_Cell);
 }
