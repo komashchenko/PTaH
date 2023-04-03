@@ -92,8 +92,8 @@ void PTaH::SDK_OnAllLoaded()
 	SM_GET_LATE_IFACE(SDKTOOLS, sdktools);
 
 	iserver = sdktools->GetIServer();
-	g_pCEconItemSchema = new CEconItemSchema();
-	g_pCPlayerVoiceListener = new CPlayerVoiceListener();
+	g_pCEconItemSchema = CEconItemSchema::GetEconItemSchema();
+	g_pCPlayerVoiceListener = CPlayerVoiceListener::GetPlayerVoiceListener();
 
 	g_ForwardManager.Init();
 }

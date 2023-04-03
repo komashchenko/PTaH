@@ -22,7 +22,7 @@
 #include "classes.h"
 
 
-void* CEconItemSchema::operator new(size_t) throw()
+CEconItemSchema* CEconItemSchema::GetEconItemSchema()
 {
 	//Called once, no static needed
 	uintptr_t (*GetItemSchema)(void);
@@ -347,7 +347,7 @@ int CEconItemView::GetKillEaterValue()
 	return -1;
 }
 
-void* CPlayerVoiceListener::operator new(size_t) throw()
+CPlayerVoiceListener* CPlayerVoiceListener::GetPlayerVoiceListener()
 {
 	void* addr = nullptr;
 
@@ -356,7 +356,7 @@ void* CPlayerVoiceListener::operator new(size_t) throw()
 		smutils->LogError(myself, "Failed to get g_CPlayerVoiceListener address.");
 	}
 
-	return addr;
+	return reinterpret_cast<CPlayerVoiceListener*>(addr);
 }
 
 bool CPlayerVoiceListener::IsPlayerSpeaking(int iClient)

@@ -131,8 +131,7 @@ public:
 class CEconItemSchema
 {
 public:
-	static void* operator new(size_t) throw();
-	static void operator delete(void*) { };
+	static CEconItemSchema* GetEconItemSchema();
 
 	CUtlHashMapLarge<int, CEconItemDefinition*>* GetItemDefinitionMap();
 	CUtlVector<CEconItemAttributeDefinition*>* GetAttributeDefinitionContainer();
@@ -317,8 +316,7 @@ public:
 class CPlayerVoiceListener
 {
 public:
-	static void* operator new(size_t) throw();
-	static void operator delete(void*) { };
+	static CPlayerVoiceListener* GetPlayerVoiceListener();
 
 	bool IsPlayerSpeaking(int iClient);
 };
