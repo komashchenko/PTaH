@@ -319,6 +319,18 @@ public:
 	static CPlayerVoiceListener* GetPlayerVoiceListener();
 
 	bool IsPlayerSpeaking(int iClient);
+
+private:
+	void* m_pVTable; // 0
+
+private: // CAutoGameSystem
+	void* m_pNext; // 4
+	char const* m_pszName; // 8
+
+private:
+	// Should be 65, but Valve made a mistake :(
+	float m_flLastPlayerSpeechTime[64]; // 12
+	float m_flPlayerSpeechDuration[64]; // 268
 };
 
 class CBaseClient : public IGameEventListener2, public IClient

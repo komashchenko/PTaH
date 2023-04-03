@@ -361,7 +361,7 @@ CPlayerVoiceListener* CPlayerVoiceListener::GetPlayerVoiceListener()
 
 bool CPlayerVoiceListener::IsPlayerSpeaking(int iClient)
 {
-	return *reinterpret_cast<float*>(reinterpret_cast<intptr_t>(this) + 4 * iClient + 12) + 0.5f > gpGlobals->curtime;
+	return (m_flLastPlayerSpeechTime[iClient] + 0.5f) >= gpGlobals->curtime;
 }
 
 intptr_t CCSPlayerInventory::GetInventoryOffset()
