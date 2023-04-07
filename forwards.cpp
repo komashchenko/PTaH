@@ -92,11 +92,6 @@ CForwardManager::CBaseHook::CBaseHook()
 	m_bHooked = false;
 }
 
-CForwardManager::CBaseHook::HookTypeRegistrator::HookTypeRegistrator(CBaseHook* pBaseHook, PTaH_HookEvent htType)
-{
-	m_Hooks[htType] = pBaseHook;
-}
-
 void CForwardManager::CBaseHook::Shutdown()
 {
 	if(m_pForward)

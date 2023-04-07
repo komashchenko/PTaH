@@ -57,14 +57,6 @@ private:
 	protected:
 		IChangeableForward* m_pForward;
 		bool m_bHooked;
-
-	public:
-		class HookTypeRegistrator
-		{
-		public:
-			HookTypeRegistrator() = default;
-			HookTypeRegistrator(CBaseHook* pBaseHook, PTaH_HookEvent htType);
-		} m_HookType;
 	};
 
 	/////////////////////////////////
